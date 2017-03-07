@@ -84,8 +84,8 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 
 	/* |optind| holds the index of the first non-option argument in |argv| */
 	args->bmpfname = argv[optind];
-	printf("[DEBUG] optind: %d\n", optind);
-	printf("[DEBUG] fname: %s\n", args->bmpfname);
+	/* printf("[DEBUG] optind: %d\n", optind); */
+	/* printf("[DEBUG] fname: %s\n", args->bmpfname); */
 
 	if (!(args->dflag || args->eflag)) {
 		fprintf(stderr,

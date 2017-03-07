@@ -28,7 +28,7 @@ bool check_bmp(FILE * const fp)
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	printf("[DEBUG] size of file: %ld\n", statbuf.st_size);
+	/* printf("[DEBUG] size of file: %ld\n", statbuf.st_size); */
 
 	if (statbuf.st_size < SUPPORTED_MIN_FILE_SIZE) {
 		fprintf(stderr,
@@ -48,8 +48,8 @@ bool check_bmp(FILE * const fp)
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	printf("[DEBUG] expect: %s\n", expect);
-	printf("[DEBUG] marker: %c%c\n", marker[0], marker[1]);
+	/* printf("[DEBUG] expect: %s\n", expect); */
+	/* printf("[DEBUG] marker: %c%c\n", marker[0], marker[1]); */
 
 	return memcmp(marker, expect, 2) == 0;
 }
@@ -211,7 +211,7 @@ struct RGB *read_bmp(FILE * const fp, size_t offset, size_t *rgblen)
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	printf("[DEBUG] rgblen: %zu\n", *rgblen);
+	/* printf("[DEBUG] rgblen: %zu\n", *rgblen); */
 	if (!(data = malloc(*rgblen))) {
 		perror("malloc");
 		clean_exit(fp, NULL, EXIT_FAILURE);
@@ -262,7 +262,7 @@ void reveal_msg(struct RGB const *data, size_t const rgblen,
 	/* Make sure not to print past the image */
 	len = blue_bytes > ccount ? ccount : blue_bytes;
 
-	printf("[DEBUG] printing %zu bytes\n", len);
+	/* printf("[DEBUG] printing %zu bytes\n", len); */
 	printf("Message:\n");
 	for (size_t i = 0; i < len; i++) {
 		if (isprint(data[i].b))
