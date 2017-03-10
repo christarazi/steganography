@@ -17,10 +17,8 @@ int main(int argc, char **argv)
 	}
 
 	struct BMP_file bmpfile;
-	if (!init_bmp(fp, &bmpfile)) {
-		fprintf(stderr, "Error: file format not supported\n");
+	if (!init_bmp(fp, &bmpfile))
 		clean_exit(fp, NULL, EXIT_FAILURE);
-	}
 
 	read_bmp(fp, &bmpfile);
 

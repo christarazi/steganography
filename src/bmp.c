@@ -23,9 +23,9 @@ bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 
 	/* Get size of file */
 	if ((fstat(fd, &statbuf) != 0) || (!S_ISREG(statbuf.st_mode))) {
-		fprintf(stderr, "Error: could not extract file info, "
-			"make sure it is a regular file\n");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		fprintf(stderr, "Error: could not determine file size, "
+			"ensure it is a regular file\n");
+		return false;
 	}
 
 	/* printf("[DEBUG] size of file: %ld\n", statbuf.st_size); */
@@ -33,12 +33,12 @@ bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 	if (statbuf.st_size < SUPPORTED_MIN_FILE_SIZE) {
 		fprintf(stderr,
 			"Error: file is too small to be valid BMP file; possibly corrupt\n");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		return false;
 	}
 
 	if (statbuf.st_size > SUPPORTED_MAX_FILE_SIZE) {
 		fprintf(stderr, "Error: file is too large\n");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		return false;
 	}
 
 	bmpfile->tot_size = statbuf.st_size;
@@ -55,7 +55,7 @@ bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 
 	if (memcmp(marker, expect, 2) != 0) {
 		fprintf(stderr, "Error: unknown file format\n");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		return false;
 	}
 
 	bmpfile->diblen = find_dib_len(fp);
@@ -78,8 +78,7 @@ bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 		bmpfile->type = BITMAPV5HEADER;
 		break;
 	default:
-		fprintf(stderr, "Error: unknown file format\n");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		fprintf(stderr, "Error: unknown DIB header found\n");
 		return false;
 	}
 
