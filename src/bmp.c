@@ -236,7 +236,16 @@ void read_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	*rgblen = (size_t) ftell(fp) - offset;
+	/* printf("[DEBUG] total size: %zu\n", bmpfile->tot_size); */
+	/* printf("[DEBUG] data_off:   %zu\n", bmpfile->data_off); */
+	if (bmpfile->tot_size <= bmpfile->data_off) {
+		fprintf(stderr,
+			"Error: file seems to be missing its data section; possibly "
+			"corrupt\n");
+		clean_exit(fp, NULL, EXIT_FAILURE);
+	}
+
+	rgblen = bmpfile->tot_size - bmpfile->data_off;
 
 	/* Seek back to beginning of data section */
 	if (fseek(fp, (long) bmpfile->data_off, SEEK_SET) < 0) {
