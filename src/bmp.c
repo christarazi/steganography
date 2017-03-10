@@ -2,14 +2,14 @@
 #include "../include/helper.h"
 
 /*
- * Checks the first two bytes of the input file. The first two bytes of a BPM
- * file indicate its type. This function will also try to determine if the
- * file is a valid BPM file by checking it if it meets
- * SUPPORTED_MIN_FILE_SIZE and is less than SUPPORTED_MAX_FILE_SIZE.
+ * Initializes |bmpfile| struct with BMP information such as type of header,
+ * header length, total file size, etc.
+ *
+ * This function will also validate that the input file is a valid BMP file.
  *
  * Returns: true if file is supported; false otherwise.
  */
-bool check_bmp(FILE * const fp)
+bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 {
 	unsigned char const expect[] = SUPPORTED_FILE_TYPE;
 	unsigned char marker[2];
@@ -32,14 +32,16 @@ bool check_bmp(FILE * const fp)
 
 	if (statbuf.st_size < SUPPORTED_MIN_FILE_SIZE) {
 		fprintf(stderr,
-			"Error: file format not supported, possibly corrupt\n");
+			"Error: file is too small to be valid BMP file; possibly corrupt\n");
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
 	if (statbuf.st_size > SUPPORTED_MAX_FILE_SIZE) {
-		fprintf(stderr, "Error: file too large\n");
+		fprintf(stderr, "Error: file is too large\n");
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
+
+	bmpfile->tot_size = statbuf.st_size;
 
 	/* Make sure to read from the beginning of the file */
 	rewind(fp);
@@ -51,7 +53,39 @@ bool check_bmp(FILE * const fp)
 	/* printf("[DEBUG] expect: %s\n", expect); */
 	/* printf("[DEBUG] marker: %c%c\n", marker[0], marker[1]); */
 
-	return memcmp(marker, expect, 2) == 0;
+	if (memcmp(marker, expect, 2) != 0) {
+		fprintf(stderr, "Error: unknown file format\n");
+		clean_exit(fp, NULL, EXIT_FAILURE);
+	}
+
+	bmpfile->diblen = find_dib_len(fp);
+	bmpfile->headerlen = BMPFILEHEADERLEN + bmpfile->diblen;
+
+	switch (bmpfile->diblen) {
+	case BITMAPCOREHEADERLEN:
+		bmpfile->type = BITMAPCOREHEADER;
+		break;
+	case OS22XBITMAPHEADERLEN:
+		bmpfile->type = OS22XBITMAPHEADER;
+		break;
+	case BITMAPINFOHEADERLEN:
+		bmpfile->type = BITMAPINFOHEADER;
+		break;
+	case BITMAPV4HEADERLEN:
+		bmpfile->type = BITMAPV4HEADER;
+		break;
+	case BITMAPV5HEADERLEN:
+		bmpfile->type = BITMAPV5HEADER;
+		break;
+	default:
+		fprintf(stderr, "Error: unknown file format\n");
+		clean_exit(fp, NULL, EXIT_FAILURE);
+		return false;
+	}
+
+	bmpfile->data_off = find_data_offset(fp);
+
+	return true;
 }
 
 /*
@@ -140,44 +174,45 @@ unsigned int find_bpp(FILE * const fp)
 }
 
 /*
- * Create steganographic BMP file with |data|. The header is copied from the
- * source file. This function writes the RGB pixels stored in |data|.
+ * Creates a steganographic BMP file out of |bmpfile->data|. The header for the
+ * new BMP file is copied from the source file.
  *
- * Return: file descriptor of created file.
+ * Return: file descriptor of new file.
  */
-int create_file(FILE * const fp, size_t const hlen,
-		const struct RGB * const data, size_t datalen)
+int create_file(FILE * const fp, struct BMP_file * const bmpfile)
 {
 	int tmpfd;
 	unsigned char *header;
+	size_t hlen = bmpfile->headerlen;
 	char tmpfname[] = "fileXXXXXX";
 
 	if (!(header = malloc(hlen))) {
 		perror("malloc");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
 	}
 
-	printf("Full header (BMP header & DIB header) len: %zu\n", hlen);
+	printf("Full header (BMP header & DIB header) len: %zu\n",
+	       bmpfile->headerlen);
 
 	if ((tmpfd = mkstemp(tmpfname)) < 0) {
 		perror("mkstemp");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	rewind(fp);
 	if (fread(header, 1, hlen, fp) != hlen && !feof(fp)) {
 		perror("fread");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	if (write(tmpfd, header, hlen) < 0) {
 		perror("write");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
 	}
 
-	if (write(tmpfd, data, datalen) < 0) {
+	if (write(tmpfd, bmpfile->data, bmpfile->datalen) < 0) {
 		perror("write");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	printf("Created temp file: %s\n", tmpfname);
@@ -188,14 +223,12 @@ int create_file(FILE * const fp, size_t const hlen,
 
 /*
  * Read the RGB pixels (data) of the BMP file.
- *
- * The length of the data section in bytes is returned in |rgblen|.
- *
- * Returns: a struct RGB filled with the RGB pixels.
+ * Populates the |bmpfile| struct with the RGB data and the length of the data.
  */
-struct RGB *read_bmp(FILE * const fp, size_t offset, size_t *rgblen)
+void read_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 {
 	struct RGB *data;
+	size_t rgblen;
 
 	/* Find length of data section */
 	if (fseek(fp, 0L, SEEK_END) < 0) {
@@ -206,25 +239,25 @@ struct RGB *read_bmp(FILE * const fp, size_t offset, size_t *rgblen)
 	*rgblen = (size_t) ftell(fp) - offset;
 
 	/* Seek back to beginning of data section */
-	if (fseek(fp, (long) offset, SEEK_SET) < 0) {
+	if (fseek(fp, (long) bmpfile->data_off, SEEK_SET) < 0) {
 		perror("fseek");
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	/* printf("[DEBUG] rgblen: %zu\n", *rgblen); */
-	if (!(data = malloc(*rgblen))) {
+	/* printf("[DEBUG] rgblen: %zu\n", rgblen); */
+	if (!(data = malloc(rgblen))) {
 		perror("malloc");
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	if ((fread(data, 1, *rgblen, fp) != *rgblen) && !feof(fp)) {
+	if ((fread(data, 1, rgblen, fp) != rgblen) && !feof(fp)) {
 		perror("fread");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(fp, data, EXIT_FAILURE);
 	}
 
-	printf("Read %zu RGB values\n", *rgblen);
-
-	return data;
+	bmpfile->datalen = rgblen;
+	bmpfile->data = data;
+	printf("Read %zu RGB values\n", rgblen);
 }
 
 /*
@@ -232,19 +265,19 @@ struct RGB *read_bmp(FILE * const fp, size_t offset, size_t *rgblen)
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg(FILE * const fp, struct RGB * const data, size_t const rgblen,
+void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
 	      char const *msg, size_t const msglen)
 {
-	size_t maxlen = rgblen / 3;
+	size_t maxlen = bmpfile->datalen / 3;
 
 	/* Make sure not to overflow |data| */
 	if (msglen > maxlen) {
 		fprintf(stderr, "Error: message is too big for image\n");
-		clean_exit(fp, data, EXIT_FAILURE);
+		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	for (size_t i = 0; i < msglen; i++)
-		data[i].b = msg[i];
+		bmpfile->data[i].b = msg[i];
 }
 
 /*
@@ -253,11 +286,10 @@ void hide_msg(FILE * const fp, struct RGB * const data, size_t const rgblen,
  * This function does the opposite of hide_msg(), but does not alter the
  * |data| values; just prints the message.
  */
-void reveal_msg(struct RGB const *data, size_t const rgblen,
-		size_t const ccount)
+void reveal_msg(struct BMP_file * const bmpfile, size_t const ccount)
 {
 	size_t len;
-	size_t blue_bytes = rgblen / 3;
+	size_t blue_bytes = bmpfile->datalen / 3;
 
 	/* Make sure not to print past the image */
 	len = blue_bytes > ccount ? ccount : blue_bytes;
@@ -265,8 +297,8 @@ void reveal_msg(struct RGB const *data, size_t const rgblen,
 	/* printf("[DEBUG] printing %zu bytes\n", len); */
 	printf("Message:\n");
 	for (size_t i = 0; i < len; i++) {
-		if (isprint(data[i].b))
-			printf("%c", data[i].b);
+		if (isprint(bmpfile->data[i].b))
+			printf("%c", bmpfile->data[i].b);
 	}
 	printf("\nEnd of message\n");
 }

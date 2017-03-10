@@ -7,8 +7,38 @@
 #define SUPPORTED_FILE_TYPE     "BM"
 #define SUPPORTED_DIBHEAD_SIZE  124U
 #define SUPPORTED_BPP           24U
-#define SUPPORTED_MIN_FILE_SIZE 138U        /* Header + DIB Header */
+#define SUPPORTED_MIN_FILE_SIZE 26U         /* Smallest possible BMP */
 #define SUPPORTED_MAX_FILE_SIZE 2147483647U /* 2^31 - 1 == 2GB */
+
+#define BMPFILEHEADERLEN     14L /* Standard BMP file header */
+
+#define BITMAPCOREHEADERLEN  12L
+#define OS22XBITMAPHEADERLEN 64L
+#define BITMAPINFOHEADERLEN  40L
+#define BITMAPV4HEADERLEN    108L
+#define BITMAPV5HEADERLEN    124L
+
+enum DIB_type {
+	BITMAPCOREHEADER,
+	OS22XBITMAPHEADER,
+	/* OS22XBITMAPHEADER-16, (16 byte variant) */
+	BITMAPINFOHEADER,
+	/* BITMAPV2INFOHEADER, (Undocumented according to Wikipedia) */
+	/* BITMAPV3INFOHEADER, (Same as above) */
+	BITMAPV4HEADER,
+	BITMAPV5HEADER
+};
+
+struct BMP_file {
+	enum DIB_type type;      /* DIB header type */
+	unsigned int  bpp;       /* Bits per pixel */
+	size_t        diblen;    /* Length of DIB header */
+	size_t        data_off;  /* Offset where RGB pixels begin */
+	size_t        datalen;   /* Length in bytes of data section */
+	size_t        headerlen; /* Length in bytes of file header */
+	size_t        tot_size;  /* Total size of file in bytes */
+	struct RGB    *data;     /* RGB pixels */
+};
 
 struct RGB {
 	unsigned char b;
@@ -17,14 +47,14 @@ struct RGB {
 };
 
 /*
- * Checks the first two bytes of the input file. The first two bytes of a BPM
- * file indicate its type. This function will also try to determine if the
- * file is a valid BPM file by checking it if it meets
- * SUPPORTED_MIN_FILE_SIZE and is less than SUPPORTED_MAX_FILE_SIZE.
+ * Initializes |bmpfile| struct with BMP information such as type of header,
+ * header length, total file size, etc.
+ *
+ * This function will also validate that the input file is a valid BMP file.
  *
  * Returns: true if file is supported; false otherwise.
  */
-bool check_bmp(FILE * const fp);
+bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile);
 
 /*
  * Finds offset at which the data of BMP file resides. This is where the RGB
@@ -54,29 +84,25 @@ size_t find_dib_len(FILE * const fp);
 unsigned int find_bpp(FILE * const fp);
 
 /*
- * Create steganographic BMP file with |data|. The header is copied from the
- * source file. This function writes the RGB pixels stored in |data|.
+ * Creates a steganographic BMP file out of |bmpfile->data|. The header for the
+ * new BMP file is copied from the source file.
  *
- * Return: file descriptor of created file.
+ * Return: file descriptor of new file.
  */
-int create_file(FILE * const fp, size_t const hlen,
-		const struct RGB *const data, size_t datalen);
+int create_file(FILE * const fp, struct BMP_file * const bmpfile);
 
 /*
  * Read the RGB pixels (data) of the BMP file.
- *
- * The length of the data section in bytes is returned in |rgblen|.
- *
- * Returns: a struct RGB filled with the RGB pixels.
+ * Populates the |bmpfile| struct with the RGB data and the length of the data.
  */
-struct RGB *read_bmp(FILE * const fp, size_t offset, size_t *rgblen);
+void read_bmp(FILE * const fp, struct BMP_file * const bmpfile);
 
 /*
  * Hides |msg| in |data|.
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg(FILE * const fp, struct RGB * const data, size_t const rgblen,
+void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
 		char const *msg, size_t const msglen);
 
 /*
@@ -85,7 +111,6 @@ void hide_msg(FILE * const fp, struct RGB * const data, size_t const rgblen,
  * This function does the opposite of hide_msg(), but does not alter the
  * |data| values; just prints the message.
  */
-void reveal_msg(struct RGB const *data, size_t const rgblen,
-		size_t const ccount);
+void reveal_msg(struct BMP_file * const bmpfile, size_t const ccount);
 
 #endif  /* _BMP_H_ */

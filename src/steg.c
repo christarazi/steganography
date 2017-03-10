@@ -16,15 +16,9 @@ int main(int argc, char **argv)
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	if (!check_bmp(fp)) {
+	struct BMP_file bmpfile;
+	if (!init_bmp(fp, &bmpfile)) {
 		fprintf(stderr, "Error: file format not supported\n");
-		clean_exit(fp, NULL, EXIT_FAILURE);
-	}
-
-	size_t const offset = find_data_offset(fp);
-	size_t const diblen = find_dib_len(fp);
-	if (diblen != SUPPORTED_DIBHEAD_SIZE) {
-		fprintf(stderr, "Error: unsupported file header\n");
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
@@ -36,18 +30,17 @@ int main(int argc, char **argv)
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	size_t rgblen;
-	struct RGB * const rgbs = read_bmp(fp, offset, &rgblen);
+	read_bmp(fp, &bmpfile);
 
 	if (args.eflag) {
-		hide_msg(fp, rgbs, rgblen, args.emsg, args.emsglen);
-		int const fd = create_file(fp, offset, rgbs, rgblen);
+		hide_msg(fp, &bmpfile, args.emsg, args.emsglen);
+		int const fd = create_file(fp, &bmpfile);
 		close(fd);
 	} else if (args.dflag) {
-		reveal_msg(rgbs, rgblen, args.ccount);
+		reveal_msg(&bmpfile, args.ccount);
 	}
 
-	free(rgbs);
+	free(bmpfile.data);
 	fclose(fp);
 	return EXIT_SUCCESS;
 }
