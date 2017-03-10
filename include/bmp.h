@@ -75,13 +75,10 @@ size_t find_data_offset(FILE * const fp);
 size_t find_dib_len(FILE * const fp);
 
 /*
- * Finds the bits per pixel used in BMP file. This value can be found in the
- * 28th byte of the BITMAPINFOHEADER in the DIB header. It is a 4 byte value
+ * Finds the bits per pixel used in BMP file. It is a 4 byte value
  * that is stored unsigned.
- *
- * Returns: bits per pixel in BMP file.
  */
-unsigned int find_bpp(FILE * const fp);
+void find_bpp(FILE * const fp, struct BMP_file * const bmpfile);
 
 /*
  * Creates a steganographic BMP file out of |bmpfile->data|. The header for the

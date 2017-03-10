@@ -84,6 +84,7 @@ bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 	}
 
 	bmpfile->data_off = find_data_offset(fp);
+	find_bpp(fp, bmpfile);
 
 	return true;
 }
@@ -147,17 +148,21 @@ size_t find_dib_len(FILE * const fp)
 }
 
 /*
- * Finds the bits per pixel used in BMP file. This value can be found in the
- * 28th byte of the BITMAPINFOHEADER in the DIB header. It is a 4 byte value
+ * Finds the bits per pixel used in BMP file. It is a 4 byte value
  * that is stored unsigned.
- *
- * Returns: bits per pixel in BMP file.
  */
-unsigned int find_bpp(FILE * const fp)
+void find_bpp(FILE * const fp, struct BMP_file * const bmpfile)
 {
 	unsigned char buf[4];
 
-	if (fseek(fp, 28L, SEEK_SET) < 0) {
+	/*
+	 * There are two different locations for this value which depend on the
+	 * type of header. If the header type is BITMAPCOREHEADER then it's located
+	 * in the 24th byte, otherwise, it's the 28th byte.
+	 */
+	long check_byte = bmpfile->type == BITMAPCOREHEADER ? 24L : 28L;
+
+	if (fseek(fp, check_byte, SEEK_SET) < 0) {
 		perror("fseek");
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
@@ -168,9 +173,15 @@ unsigned int find_bpp(FILE * const fp)
 	}
 
 	unsigned int bpp = *((unsigned int *) buf);
-	printf("Found bits per pixel: %u\n", bpp);
+	if (bpp != SUPPORTED_BPP) {
+		fprintf(stderr,
+			"Error: only %u bits per pixel supported, found %u\n",
+			SUPPORTED_BPP, bpp);
+		clean_exit(fp, NULL, EXIT_FAILURE);
+	}
 
-	return bpp;
+	printf("Found bits per pixel: %u\n", bpp);
+	bmpfile->bpp = bpp;
 }
 
 /*

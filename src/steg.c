@@ -22,14 +22,6 @@ int main(int argc, char **argv)
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	unsigned int const bpp = find_bpp(fp);
-	if (bpp != SUPPORTED_BPP) {
-		fprintf(stderr,
-			"Error: only %u bits per pixel supported, found %u\n",
-			SUPPORTED_BPP, bpp);
-		clean_exit(fp, NULL, EXIT_FAILURE);
-	}
-
 	read_bmp(fp, &bmpfile);
 
 	if (args.eflag) {
