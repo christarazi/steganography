@@ -33,8 +33,8 @@ struct BMP_file {
 	enum DIB_type type;      /* DIB header type */
 	unsigned int  bpp;       /* Bits per pixel */
 	size_t        diblen;    /* Length of DIB header */
-	size_t        data_off;  /* Offset where RGB pixels begin */
-	size_t        datalen;   /* Length in bytes of data section */
+	size_t        data_off;  /* Offset where RGB pixels begin in the file */
+	size_t        datalen;   /* Length in bytes of |data| */
 	size_t        headerlen; /* Length in bytes of file header */
 	size_t        tot_size;  /* Total size of file in bytes */
 	struct RGB    *data;     /* RGB pixels */
