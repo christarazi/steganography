@@ -4,7 +4,7 @@ SRC = src
 INC = include
 BUILD = build
 INCLUDES = $(INC)/bmp.h $(INC)/helper.h $(INC)/stegan.h
-OBJS = $(BUILD)/steg.o $(BUILD)/bmp.o $(BUILD)/helper.o $(BUILD)/stegan.o
+OBJS = $(BUILD)/main.o $(BUILD)/bmp.o $(BUILD)/helper.o $(BUILD)/stegan.o
 EXE = steg
 
 all: $(EXE)
@@ -12,8 +12,8 @@ all: $(EXE)
 steg: $(OBJS)
 	$(CC) $(CCFLAGS) $(OBJS) -o $(EXE)
 
-$(BUILD)/steg.o: $(SRC)/steg.c $(INCLUDES)
-	$(CC) $(CCFLAGS) -c $(SRC)/steg.c -o $(BUILD)/steg.o
+$(BUILD)/main.o: $(SRC)/main.c $(INCLUDES)
+	$(CC) $(CCFLAGS) -c $(SRC)/main.c -o $(BUILD)/main.o
 
 $(BUILD)/bmp.o: $(SRC)/bmp.c
 	$(CC) $(CCFLAGS) -c $(SRC)/bmp.c -o $(BUILD)/bmp.o
