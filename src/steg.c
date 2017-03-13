@@ -1,5 +1,6 @@
 #include "../include/bmp.h"    /* For manipulating BMP images */
 #include "../include/helper.h" /* Helpers, clean_exit(), struct Args */
+#include "../include/stegan.h" /* hide_msg(), reveal_msg(), etc. */
 
 int main(int argc, char **argv)
 {
