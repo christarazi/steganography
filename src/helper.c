@@ -3,14 +3,19 @@
 void print_usage(char const *n)
 {
 	fprintf(stderr,
-		"Usage: %s [-h] [-d -c <COUNT> | -e <MSG>] <BMP>\n"
+		"Usage: %s [-h] [-m <METHOD>] [-d -c <COUNT> | -e <MSG>] <BMP>\n"
 		"\n"
 		"Options:\n"
 		" -h               Print this help.\n"
-		" -d               Decode and print message found in <BMP>\n"
-		" -e <MSG>         Encode message in <BMP>\n"
+		" -m <METHOD>      Method to use for steganography.\n"
+		"                  <METHOD> can be 'lsb' or 'simple'.\n"
+		"                  'lsb' is least significant bit (beter at hiding).\n"
+		"                  'simple' just replaces the pixels with <MSG>.\n"
+		" -d               Decode and print message found in <BMP>.\n"
 		" -c <COUNT>       Number of bytes to print in <BMP> when decoding "
-		"(-d)\n", n);
+		"(-d).\n"
+		" -e <MSG>         Encode message in <BMP>.\n"
+		, n);
 }
 
 void clean_exit(FILE *fp, struct RGB *rgbs, int const code)
@@ -28,11 +33,22 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 	char *cflagendr; /* Used for cflag error checking */
 	char gtp;
 
-	while ((gtp = getopt(argc, argv, "hdc:e:")) != -1) {
+	while ((gtp = getopt(argc, argv, "hm:dc:e:")) != -1) {
 		switch (gtp) {
 		case 'h':
 			print_usage(argv[0]);
 			clean_exit(NULL, NULL, EXIT_SUCCESS);
+		case 'm':
+			args->mflag = true;
+			args->mmet = optarg;
+			if ((strncmp(args->mmet, "lsb", 3) != 0) &&
+			    (strncmp(args->mmet, "simple", 6) != 0)) {
+				fprintf(stderr,
+					"Option -%c only accepts '%s' or '%s'\n",
+					'm', "lsb", "simple");
+				clean_exit(NULL, NULL, EXIT_FAILURE);
+			}
+			break;
 		case 'd':
 			args->dflag = true;
 			break;
@@ -59,7 +75,7 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 			args->emsglen = strlen(args->emsg);
 			break;
 		case '?':
-			if (optopt == 'e' || optopt == 'c')
+			if (optopt == 'm' || optopt == 'e' || optopt == 'c')
 				fprintf(stderr,
 					"Option -%c requires an argument\n",
 					optopt);
@@ -77,7 +93,7 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 		}
 	}
 
-	if (argc < 4 || (args->dflag && argc != 5)) {
+	if (argc < 6 || (args->dflag && argc != 7)) {
 		print_usage(argv[0]);
 		clean_exit(NULL, NULL, EXIT_FAILURE);
 	}
@@ -86,6 +102,11 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 	args->bmpfname = argv[optind];
 	/* printf("[DEBUG] optind: %d\n", optind); */
 	/* printf("[DEBUG] fname: %s\n", args->bmpfname); */
+
+	if (!(args->mflag)) {
+		fprintf(stderr, "Error: option -%c is required", 'm');
+		clean_exit(NULL, NULL, EXIT_FAILURE);
+	}
 
 	if (!(args->dflag || args->eflag)) {
 		fprintf(stderr,

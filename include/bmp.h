@@ -100,7 +100,7 @@ void read_bmp(FILE * const fp, struct BMP_file * const bmpfile);
  * The message is hidden in the blue channel of the RGB pixel.
  */
 void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
-		char const *msg, size_t const msglen);
+	      char const *msg, size_t const msglen);
 
 /*
  * Hides |msg| in |data| using LSB method.
@@ -108,7 +108,7 @@ void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
  * The message is hidden in the blue channel of the RGB pixel.
  */
 void hide_msg_lsb(FILE * const fp, struct BMP_file * const bmpfile,
-	      char const *msg, size_t const msglen);
+		  char const *msg, size_t const msglen);
 
 /*
  * Reveals message hidden within image.

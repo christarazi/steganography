@@ -4,6 +4,7 @@
 int main(int argc, char **argv)
 {
 	struct Args args = {
+		.mflag = false,
 		.cflag = false,
 		.dflag = false,
 		.eflag = false
@@ -22,12 +23,23 @@ int main(int argc, char **argv)
 
 	read_bmp(fp, &bmpfile);
 
+	bool lsb = false;
+	if (args.mflag && strncmp(args.mmet, "lsb", 3) == 0)
+		lsb = true;
+
 	if (args.eflag) {
-		hide_msg(fp, &bmpfile, args.emsg, args.emsglen);
+		if (lsb)
+			hide_msg_lsb(fp, &bmpfile, args.emsg, args.emsglen);
+		else
+			hide_msg(fp, &bmpfile, args.emsg, args.emsglen);
+
 		int const fd = create_file(fp, &bmpfile);
 		close(fd);
 	} else if (args.dflag) {
-		reveal_msg(&bmpfile, args.ccount);
+		if (lsb)
+			reveal_msg_lsb(&bmpfile, args.ccount);
+		else
+			reveal_msg(&bmpfile, args.ccount);
 	}
 
 	free(bmpfile.data);

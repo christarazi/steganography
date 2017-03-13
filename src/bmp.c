@@ -305,7 +305,7 @@ void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
  * The message is hidden in the blue channel of the RGB pixel.
  */
 void hide_msg_lsb(FILE * const fp, struct BMP_file * const bmpfile,
-	      char const *msg, size_t const msglen)
+		  char const *msg, size_t const msglen)
 {
 	/*
 	 * The reason for the constant 24: with LSB method (using one least
@@ -398,7 +398,7 @@ void reveal_msg_lsb(struct BMP_file * const bmpfile, size_t ccount)
 	/* Make sure not to print past the image */
 	len = blue_bytes > ccount ? ccount : blue_bytes;
 
-	unsigned char buf[8] = {0};
+	unsigned char buf[8] = { 0 };
 	unsigned char data = 0;
 	/* printf("[DEBUG] printing %zu bytes\n", len); */
 	printf("Message:\n");
