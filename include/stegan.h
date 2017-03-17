@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include "../include/bmp.h"    /* For struct BMP_file */
-#include "../include/helper.h" /* clean_exit() */
+#include "../include/helper.h" /* clean_exit(), read_file(), get_file_size() */
 
 #define SUPPORTED_MAX_MSG_LEN 255
 
@@ -40,6 +40,22 @@ void reveal_msg(struct BMP_file * const bmpfile);
  * |data| values; just prints the message.
  */
 void reveal_msg_lsb(struct BMP_file * const bmpfile);
+
+/*
+ * Hides a file by the name of |hfile| inside image.
+ *
+ * The file is hidden in the blue channel of the RGB pixel.
+ */
+void hide_file(FILE * const fp, struct BMP_file * const bmpfile,
+	      char const *hfile);
+
+/*
+ * Reveals file hidden within image.
+ *
+ * This function does the opposite of hide_file(), but does not alter the
+ * |data| values; just creates the revealed file.
+ */
+void reveal_file(struct BMP_file * const bmpfile);
 
 #endif  /* _STEGAN_H_ */
 

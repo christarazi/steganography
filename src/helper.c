@@ -3,16 +3,21 @@
 void print_usage(char const *n)
 {
 	fprintf(stderr,
-		"Usage: %s [-h] [-m <METHOD>] [-d | -e <MSG>] <BMP>\n"
-		"\n"
+		"Usage: %s [-h] [-m <METHOD>] [-t <TYPE>] [-d | -e <VAL>] <BMP>\n\n"
 		"Options:\n"
-		" -h               Print this help.\n"
+		" -h               Print this help.\n\n"
 		" -m <METHOD>      Method to use for steganography.\n"
 		"                  <METHOD> can be 'lsb' or 'simple'.\n"
 		"                  'lsb' is least significant bit (beter at hiding).\n"
-		"                  'simple' just replaces the pixels with <MSG>.\n"
-		" -d               Decode and print message found in <BMP>.\n"
-		" -e <MSG>         Encode message in <BMP>.\n"
+		"                  'simple' just replaces the pixels outright.\n\n"
+		" -t <TYPE>        Type of steganography to perform.\n"
+		"                  <TYPE> can be 'message' or 'file'.\n"
+		"                  'message' is for hiding messages.\n"
+		"                  'file' is for hiding files (or images) within <BMP>.\n\n"
+		" -d               Decode and print message found in <BMP>.\n\n"
+		" -e <VAL>         <VAL> can be a message or a file name.\n"
+		"                  When <TYPE> is 'message', <VAL> is encoded in <BMP>.\n"
+		"                  When <TYPE> is 'file', <VAL> is the file to hide in <BMP>.\n"
 		, n);
 }
 
@@ -29,7 +34,7 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 {
 	char gtp;
 
-	while ((gtp = getopt(argc, argv, "hm:de:")) != -1) {
+	while ((gtp = getopt(argc, argv, "hm:t:de:")) != -1) {
 		switch (gtp) {
 		case 'h':
 			print_usage(argv[0]);
@@ -45,13 +50,24 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 				clean_exit(NULL, NULL, EXIT_FAILURE);
 			}
 			break;
+		case 't':
+			args->tflag = true;
+			args->ttyp = optarg;
+			if ((strncmp(args->ttyp, "message", 7) != 0) &&
+			    (strncmp(args->ttyp, "file", 4) != 0)) {
+				fprintf(stderr,
+					"Option -%c only accepts '%s' or '%s'\n",
+					't', "message", "file");
+				clean_exit(NULL, NULL, EXIT_FAILURE);
+			}
+			break;
 		case 'd':
 			args->dflag = true;
 			break;
 		case 'e':
 			args->eflag = true;
-			args->emsg = optarg;
-			args->emsglen = strlen(args->emsg);
+			args->eval = optarg;
+			args->evallen = strlen(args->eval);
 			break;
 		case '?':
 			if (optopt == 'm' || optopt == 'e')
@@ -72,7 +88,7 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 		}
 	}
 
-	if (argc < 4 || (args->dflag && argc != 5)) {
+	if ((args->dflag && argc != 7) || (args->eflag && argc != 8)) {
 		print_usage(argv[0]);
 		clean_exit(NULL, NULL, EXIT_FAILURE);
 	}
@@ -84,6 +100,11 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 
 	if (!(args->mflag)) {
 		fprintf(stderr, "Error: option -%c is required", 'm');
+		clean_exit(NULL, NULL, EXIT_FAILURE);
+	}
+
+	if (!(args->tflag)) {
+		fprintf(stderr, "Error: option -%c is required", 't');
 		clean_exit(NULL, NULL, EXIT_FAILURE);
 	}
 
@@ -101,14 +122,67 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 		clean_exit(NULL, NULL, EXIT_FAILURE);
 	}
 
-	if (args->eflag && args->emsglen == 0) {
-		fprintf(stderr, "Error: message is empty\n");
+	if (args->eflag && args->evallen == 0) {
+		fprintf(stderr, "Error: value to option -%c is empty\n", 'e');
 		clean_exit(NULL, NULL, EXIT_FAILURE);
 	}
 
-	if (args->eflag && args->emsglen > SUPPORTED_MAX_MSG_LEN) {
-		fprintf(stderr, "Error: max message length is %d\n",
-			SUPPORTED_MAX_MSG_LEN);
+	if (args->eflag && args->evallen > SUPPORTED_MAX_MSG_LEN) {
+		fprintf(stderr, "Error: max length for option -%c is %d\n",
+			'e', SUPPORTED_MAX_MSG_LEN);
 		clean_exit(NULL, NULL, EXIT_FAILURE);
 	}
 }
+
+/*
+ * Helper function to get the size of the file pointed to by |fp|.
+ * The size of the file is passed by reference to |sz|.
+ *
+ * Returns: true if successful, false otherwise. size of the file.
+ */
+bool get_file_size(FILE * const fp, size_t *sz)
+{
+	int fd = fileno(fp);
+	if (fd < 0) {
+		perror("fileno");
+		fclose(fp);
+		return false;
+	}
+
+	struct stat statbuf;
+
+	if ((fstat(fd, &statbuf) != 0) || (!S_ISREG(statbuf.st_mode))) {
+		fprintf(stderr, "Error: could not determine file size, "
+			"ensure it is a regular file\n");
+		fclose(fp);
+		return false;
+	}
+
+	*sz = (size_t) statbuf.st_size;
+	return true;
+}
+
+/*
+ * Helper function to read the data of |hfp|. The length of the data is passed
+ * by the parameter |len|, which is just the size of the file determined
+ * before a call to this function. The caller must free the data returned and
+ * close the FILE pointer handle.
+ *
+ * Returns: pointer to the data (unsigned char), |hdata| or NULL on error.
+ */
+unsigned char *read_file(FILE * const hfp, size_t const len)
+{
+	unsigned char *hdata = malloc(len);
+	if (!hdata) {
+		perror("malloc");
+		return NULL;
+	}
+
+	if (fread(hdata, 1, len, hfp) != len&& !feof(hfp)) {
+		perror("fread");
+		return NULL;
+	}
+
+	return hdata;
+}
+

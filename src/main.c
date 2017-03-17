@@ -6,6 +6,7 @@ int main(int argc, char **argv)
 {
 	struct Args args = {
 		.mflag = false,
+		.tflag = false,
 		.dflag = false,
 		.eflag = false
 	};
@@ -27,19 +28,30 @@ int main(int argc, char **argv)
 	if (args.mflag && strncmp(args.mmet, "lsb", 3) == 0)
 		lsb = true;
 
-	if (args.eflag) {
-		if (lsb)
-			hide_msg_lsb(fp, &bmpfile, args.emsg, args.emsglen);
-		else
-			hide_msg(fp, &bmpfile, args.emsg, args.emsglen);
+	bool filemode = false;
+	if (args.tflag && strncmp(args.ttyp, "file", 4) == 0)
+		filemode = true;
 
+	if (args.eflag) {
+		if (filemode)
+			hide_file(fp, &bmpfile, args.eval);
+		else {
+			if (lsb)
+				hide_msg_lsb(fp, &bmpfile, args.eval, args.evallen);
+			else
+				hide_msg(fp, &bmpfile, args.eval, args.evallen);
+		}
 		int const fd = create_file(fp, &bmpfile);
 		close(fd);
 	} else if (args.dflag) {
-		if (lsb)
-			reveal_msg_lsb(&bmpfile);
-		else
-			reveal_msg(&bmpfile);
+		if (filemode)
+			reveal_file(&bmpfile);
+		else {
+			if (lsb)
+				reveal_msg_lsb(&bmpfile);
+			else
+				reveal_msg(&bmpfile);
+		}
 	}
 
 	free(bmpfile.data);
