@@ -11,14 +11,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../include/bmp.h"  /* For struct RGB */
+#include "../include/bmp.h"    /* For struct RGB */
+#include "../include/stegan.h" /* For SUPPORTED_MAX_MSG_LEN */
 
 struct Args {
 	bool mflag;           /* -m option */
 	bool cflag;           /* -c option */
 	bool dflag;           /* -d option */
 	bool eflag;           /* -e option */
-	size_t ccount;        /* Value passed to -c */
 	size_t emsglen;       /* Length of value below */
 	char const *mmet;     /* Method passed to -m */
 	char const *emsg;     /* Message passed to -e */

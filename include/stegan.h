@@ -7,6 +7,8 @@
 #include "../include/bmp.h"    /* For struct BMP_file */
 #include "../include/helper.h" /* clean_exit() */
 
+#define SUPPORTED_MAX_MSG_LEN 255
+
 /*
  * Hides |msg| in |data|.
  *
@@ -29,7 +31,7 @@ void hide_msg_lsb(FILE * const fp, struct BMP_file * const bmpfile,
  * This function does the opposite of hide_msg(), but does not alter the
  * |data| values; just prints the message.
  */
-void reveal_msg(struct BMP_file * const bmpfile, size_t const ccount);
+void reveal_msg(struct BMP_file * const bmpfile);
 
 /*
  * Reveals message hidden within image using LSB method.
@@ -37,7 +39,7 @@ void reveal_msg(struct BMP_file * const bmpfile, size_t const ccount);
  * This function does the opposite of hide_msg(), but does not alter the
  * |data| values; just prints the message.
  */
-void reveal_msg_lsb(struct BMP_file * const bmpfile, size_t ccount);
+void reveal_msg_lsb(struct BMP_file * const bmpfile);
 
 #endif  /* _STEGAN_H_ */
 

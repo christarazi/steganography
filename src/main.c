@@ -6,7 +6,6 @@ int main(int argc, char **argv)
 {
 	struct Args args = {
 		.mflag = false,
-		.cflag = false,
 		.dflag = false,
 		.eflag = false
 	};
@@ -38,9 +37,9 @@ int main(int argc, char **argv)
 		close(fd);
 	} else if (args.dflag) {
 		if (lsb)
-			reveal_msg_lsb(&bmpfile, args.ccount);
+			reveal_msg_lsb(&bmpfile);
 		else
-			reveal_msg(&bmpfile, args.ccount);
+			reveal_msg(&bmpfile);
 	}
 
 	free(bmpfile.data);
