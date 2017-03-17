@@ -65,10 +65,8 @@ void hide_msg_lsb(FILE * const fp, struct BMP_file * const bmpfile,
 			bit = (msg[m] >> j) & 1;
 			data = bmpfile->data[d].b;
 
-			if (bit)
-				data |= (data & ~(1 << 0)) | (bit << 0);
-			else
-				data &= (data & ~(1 << 0)) | (bit << 0);
+			/* Change 0th bit (LSB) to |bit| */
+			data = (data & ~(1 << 0)) | (bit << 0);
 
 			bmpfile->data[d].b = data;
 			d++;
@@ -121,15 +119,19 @@ void reveal_msg_lsb(struct BMP_file * const bmpfile, size_t ccount)
 
 	unsigned char buf[8] = { 0 };
 	unsigned char data = 0;
+	unsigned char count = 0;
 	/* printf("[DEBUG] printing %zu bytes\n", len); */
 	printf("Message:\n");
 	for (size_t i = 0; i < len; i++) {
 		buf[i % 8] = (bmpfile->data[i].b >> 0) & 1;
+		count++;
 
-		if ((i % 7) == 0) {
+		if (count == 8) {
+			count = 0;
 			data = 0;
-			for (short j = 7; j >= 0; j--)
+			for (short j = 7; j >= 0; j--) {
 				data += (buf[j] << j);
+			}
 
 			if (isprint(data))
 				printf("%c", data);
