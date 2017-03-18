@@ -9,16 +9,16 @@
  *
  * Returns: true if file is supported; false otherwise.
  */
-bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
+bool init_bmp(struct BMP_file * const bmpfile)
 {
 	unsigned char const expect[] = SUPPORTED_FILE_TYPE;
 	unsigned char marker[2];
 	struct stat statbuf;
 
-	int fd = fileno(fp);
+	int fd = fileno(bmpfile->fp);
 	if (fd < 0) {
 		perror("fileno");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
 	}
 
 	/* Get size of file */
@@ -44,10 +44,10 @@ bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 	bmpfile->tot_size = statbuf.st_size;
 
 	/* Make sure to read from the beginning of the file */
-	rewind(fp);
-	if (fread(marker, 1, 2, fp) != 2 && !feof(fp)) {
+	rewind(bmpfile->fp);
+	if (fread(marker, 1, 2, bmpfile->fp) != 2 && !feof(bmpfile->fp)) {
 		perror("fread");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
 	}
 
 	/* printf("[DEBUG] expect: %s\n", expect); */
@@ -58,7 +58,7 @@ bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 		return false;
 	}
 
-	bmpfile->diblen = find_dib_len(fp);
+	bmpfile->diblen = find_dib_len(bmpfile->fp);
 	bmpfile->headerlen = BMPFILEHEADERLEN + bmpfile->diblen;
 
 	switch (bmpfile->diblen) {
@@ -82,8 +82,8 @@ bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 		return false;
 	}
 
-	bmpfile->data_off = find_data_offset(fp);
-	find_bpp(fp, bmpfile);
+	bmpfile->data_off = find_data_offset(bmpfile->fp);
+	find_bpp(bmpfile);
 
 	return true;
 }
@@ -150,7 +150,7 @@ size_t find_dib_len(FILE * const fp)
  * Finds the bits per pixel used in BMP file. It is a 4 byte value
  * that is stored unsigned.
  */
-void find_bpp(FILE * const fp, struct BMP_file * const bmpfile)
+void find_bpp(struct BMP_file * const bmpfile)
 {
 	unsigned char buf[4];
 
@@ -161,14 +161,14 @@ void find_bpp(FILE * const fp, struct BMP_file * const bmpfile)
 	 */
 	long check_byte = bmpfile->type == BITMAPCOREHEADER ? 24L : 28L;
 
-	if (fseek(fp, check_byte, SEEK_SET) < 0) {
+	if (fseek(bmpfile->fp, check_byte, SEEK_SET) < 0) {
 		perror("fseek");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
 	}
 
-	if (fread(buf, 1, 4, fp) != 4 && !feof(fp)) {
+	if (fread(buf, 1, 4, bmpfile->fp) != 4 && !feof(bmpfile->fp)) {
 		perror("fread");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
 	}
 
 	unsigned int bpp = *((unsigned int *) buf);
@@ -176,7 +176,7 @@ void find_bpp(FILE * const fp, struct BMP_file * const bmpfile)
 		fprintf(stderr,
 			"Error: only %u bits per pixel supported, found %u\n",
 			SUPPORTED_BPP, bpp);
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
 	}
 
 	printf("Found bits per pixel: %u\n", bpp);
@@ -189,7 +189,7 @@ void find_bpp(FILE * const fp, struct BMP_file * const bmpfile)
  *
  * Return: file descriptor of new file.
  */
-int create_file(FILE * const fp, struct BMP_file * const bmpfile)
+int create_file(struct BMP_file * const bmpfile)
 {
 	int tmpfd;
 	unsigned char *header;
@@ -198,7 +198,7 @@ int create_file(FILE * const fp, struct BMP_file * const bmpfile)
 
 	if (!(header = malloc(hlen))) {
 		perror("malloc");
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	printf("Full header (BMP header & DIB header) len: %zu\n",
@@ -206,23 +206,23 @@ int create_file(FILE * const fp, struct BMP_file * const bmpfile)
 
 	if ((tmpfd = mkstemp(tmpfname)) < 0) {
 		perror("mkstemp");
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
-	rewind(fp);
-	if (fread(header, 1, hlen, fp) != hlen && !feof(fp)) {
+	rewind(bmpfile->fp);
+	if (fread(header, 1, hlen, bmpfile->fp) != hlen && !feof(bmpfile->fp)) {
 		perror("fread");
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	if (write(tmpfd, header, hlen) < 0) {
 		perror("write");
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	if (write(tmpfd, bmpfile->data, bmpfile->datalen) < 0) {
 		perror("write");
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	printf("Created temp file: %s\n", tmpfname);
@@ -235,15 +235,15 @@ int create_file(FILE * const fp, struct BMP_file * const bmpfile)
  * Read the RGB pixels (data) of the BMP file.
  * Populates the |bmpfile| struct with the RGB data and the length of the data.
  */
-void read_bmp(FILE * const fp, struct BMP_file * const bmpfile)
+void read_bmp(struct BMP_file * const bmpfile)
 {
 	struct RGB *data;
 	size_t rgblen;
 
 	/* Find length of data section */
-	if (fseek(fp, 0L, SEEK_END) < 0) {
+	if (fseek(bmpfile->fp, 0L, SEEK_END) < 0) {
 		perror("fseek");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
 	}
 
 	/* printf("[DEBUG] total size: %zu\n", bmpfile->tot_size); */
@@ -252,26 +252,26 @@ void read_bmp(FILE * const fp, struct BMP_file * const bmpfile)
 		fprintf(stderr,
 			"Error: file seems to be missing its data section; possibly "
 			"corrupt\n");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
 	}
 
 	rgblen = bmpfile->tot_size - bmpfile->data_off;
 
 	/* Seek back to beginning of data section */
-	if (fseek(fp, (long) bmpfile->data_off, SEEK_SET) < 0) {
+	if (fseek(bmpfile->fp, (long) bmpfile->data_off, SEEK_SET) < 0) {
 		perror("fseek");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
 	}
 
 	/* printf("[DEBUG] rgblen: %zu\n", rgblen); */
 	if (!(data = malloc(rgblen))) {
 		perror("malloc");
-		clean_exit(fp, NULL, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
 	}
 
-	if ((fread(data, 1, rgblen, fp) != rgblen) && !feof(fp)) {
+	if ((fread(data, 1, rgblen, bmpfile->fp) != rgblen) && !feof(bmpfile->fp)) {
 		perror("fread");
-		clean_exit(fp, data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, data, EXIT_FAILURE);
 	}
 
 	bmpfile->datalen = rgblen;

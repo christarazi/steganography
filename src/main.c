@@ -19,10 +19,11 @@ int main(int argc, char **argv)
 	}
 
 	struct BMP_file bmpfile;
-	if (!init_bmp(fp, &bmpfile))
-		clean_exit(fp, NULL, EXIT_FAILURE);
+	bmpfile.fp = fp;
+	if (!init_bmp(&bmpfile))
+		clean_exit(bmpfile.fp, NULL, EXIT_FAILURE);
 
-	read_bmp(fp, &bmpfile);
+	read_bmp(&bmpfile);
 
 	bool lsb = false;
 	if (args.mflag && strncmp(args.mmet, "lsb", 3) == 0)
@@ -34,14 +35,14 @@ int main(int argc, char **argv)
 
 	if (args.eflag) {
 		if (filemode)
-			hide_file(fp, &bmpfile, args.eval);
+			hide_file(&bmpfile, args.eval);
 		else {
 			if (lsb)
-				hide_msg_lsb(fp, &bmpfile, args.eval, args.evallen);
+				hide_msg_lsb(&bmpfile, args.eval, args.evallen);
 			else
-				hide_msg(fp, &bmpfile, args.eval, args.evallen);
+				hide_msg(&bmpfile, args.eval, args.evallen);
 		}
-		int const fd = create_file(fp, &bmpfile);
+		int const fd = create_file(&bmpfile);
 		close(fd);
 	} else if (args.dflag) {
 		if (filemode)
@@ -55,6 +56,6 @@ int main(int argc, char **argv)
 	}
 
 	free(bmpfile.data);
-	fclose(fp);
+	fclose(bmpfile.fp);
 	return EXIT_SUCCESS;
 }

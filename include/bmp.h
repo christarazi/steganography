@@ -37,6 +37,7 @@ struct BMP_file {
 	size_t        datalen;   /* Length in bytes of |data| */
 	size_t        headerlen; /* Length in bytes of file header */
 	size_t        tot_size;  /* Total size of file in bytes */
+	FILE          *fp;       /* File handle */
 	struct RGB    *data;     /* RGB pixels */
 };
 
@@ -54,7 +55,7 @@ struct RGB {
  *
  * Returns: true if file is supported; false otherwise.
  */
-bool init_bmp(FILE * const fp, struct BMP_file * const bmpfile);
+bool init_bmp(struct BMP_file * const bmpfile);
 
 /*
  * Finds offset at which the data of BMP file resides. This is where the RGB
@@ -78,7 +79,7 @@ size_t find_dib_len(FILE * const fp);
  * Finds the bits per pixel used in BMP file. It is a 4 byte value
  * that is stored unsigned.
  */
-void find_bpp(FILE * const fp, struct BMP_file * const bmpfile);
+void find_bpp(struct BMP_file * const bmpfile);
 
 /*
  * Creates a steganographic BMP file out of |bmpfile->data|. The header for the
@@ -86,12 +87,12 @@ void find_bpp(FILE * const fp, struct BMP_file * const bmpfile);
  *
  * Return: file descriptor of new file.
  */
-int create_file(FILE * const fp, struct BMP_file * const bmpfile);
+int create_file(struct BMP_file * const bmpfile);
 
 /*
  * Read the RGB pixels (data) of the BMP file.
  * Populates the |bmpfile| struct with the RGB data and the length of the data.
  */
-void read_bmp(FILE * const fp, struct BMP_file * const bmpfile);
+void read_bmp(struct BMP_file * const bmpfile);
 
 #endif  /* _BMP_H_ */

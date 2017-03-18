@@ -5,7 +5,7 @@
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
+void hide_msg(struct BMP_file * const bmpfile,
 	      char const *msg, size_t const msglen)
 {
 	size_t maxlen = bmpfile->datalen / 3;
@@ -13,7 +13,7 @@ void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
 	/* Make sure not to overflow |data| */
 	if (msglen > maxlen) {
 		fprintf(stderr, "Error: message is too big for image\n");
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	bmpfile->data[0].b = (unsigned char) msglen;
@@ -27,7 +27,7 @@ void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg_lsb(FILE * const fp, struct BMP_file * const bmpfile,
+void hide_msg_lsb(struct BMP_file * const bmpfile,
 		  char const *msg, size_t const msglen)
 {
 	/*
@@ -43,7 +43,7 @@ void hide_msg_lsb(FILE * const fp, struct BMP_file * const bmpfile,
 	/* Make sure not to overflow |data| */
 	if (msglen > maxlen) {
 		fprintf(stderr, "Error: message is too big for image\n");
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	unsigned char bit;
@@ -130,7 +130,7 @@ void reveal_msg_lsb(struct BMP_file * const bmpfile)
 	if (len > (bmpfile->datalen / 3)) {
 		fprintf(stderr,
 			"Error: length mismatch found; possibly corrupt\n");
-		clean_exit(NULL, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	unsigned char data = 0;
@@ -159,8 +159,7 @@ void reveal_msg_lsb(struct BMP_file * const bmpfile)
  *
  * The file is hidden in the blue channel of the RGB pixel.
  */
-void hide_file(FILE * const fp, struct BMP_file * const bmpfile,
-	      char const *hfile)
+void hide_file(struct BMP_file * const bmpfile, char const *hfile)
 {
 	/*
 	 * The maximum amount of bytes that could be written is the number of blue
@@ -172,27 +171,27 @@ void hide_file(FILE * const fp, struct BMP_file * const bmpfile,
 	FILE *hfp = fopen(hfile, "rb");
 	if (!hfp) {
 		perror("fopen");
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	size_t hidelen;
 	if (!get_file_size(hfp, &hidelen)) {
 		fprintf(stderr, "Error: could not obtain size of file\n");
 		fclose(hfp);
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	if (hidelen > maxlen) {
 		fprintf(stderr, "Error: file too large to hide inside image\n");
 		fclose(hfp);
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	unsigned char *hdata = read_file(hfp, hidelen);
 	if (!hdata) {
 		fprintf(stderr, "Error: could not read file\n");
 		fclose(hfp);
-		clean_exit(fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	/* Write size of file (4 bytes) */
@@ -232,13 +231,13 @@ void reveal_file(struct BMP_file * const bmpfile)
 	if (hidelen > maxlen) {
 		fprintf(stderr,
 			"Error: length mismatch found; possibly corrupt\n");
-		clean_exit(NULL, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	unsigned char *hdata = malloc(hidelen);
 	if (!hdata) {
 		perror("malloc");
-		clean_exit(NULL, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	/*
@@ -252,13 +251,13 @@ void reveal_file(struct BMP_file * const bmpfile)
 	int outfd = mkstemp(outname);
 	if (outfd < 0) {
 		perror("mkstemp");
-		clean_exit(NULL, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	if (write(outfd, hdata, hidelen) < 0) {
 		perror("write");
 		close(outfd);
-		clean_exit(NULL, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
 	}
 
 	printf("Decoded file: %s\n", outname);

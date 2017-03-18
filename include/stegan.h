@@ -14,7 +14,7 @@
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
+void hide_msg(struct BMP_file * const bmpfile,
 	      char const *msg, size_t const msglen);
 
 /*
@@ -22,7 +22,7 @@ void hide_msg(FILE * const fp, struct BMP_file * const bmpfile,
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg_lsb(FILE * const fp, struct BMP_file * const bmpfile,
+void hide_msg_lsb(struct BMP_file * const bmpfile,
 		  char const *msg, size_t const msglen);
 
 /*
@@ -46,8 +46,7 @@ void reveal_msg_lsb(struct BMP_file * const bmpfile);
  *
  * The file is hidden in the blue channel of the RGB pixel.
  */
-void hide_file(FILE * const fp, struct BMP_file * const bmpfile,
-	      char const *hfile);
+void hide_file(struct BMP_file * const bmpfile, char const *hfile);
 
 /*
  * Reveals file hidden within image.
