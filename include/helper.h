@@ -14,6 +14,9 @@
 #include "../include/bmp.h"    /* For struct RGB */
 #include "../include/stegan.h" /* For SUPPORTED_MAX_MSG_LEN */
 
+/* Forward declarations */
+struct RGB;
+
 struct Args {
 	bool mflag;           /* -m option */
 	bool tflag;           /* -t option */

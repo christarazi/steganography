@@ -1,11 +1,76 @@
 #include "../include/stegan.h"
 
+static void hide_msg(struct BMP_file * const bmp, char const *msg,
+		     size_t const msglen);
+static void hide_msg_lsb(struct BMP_file * const bmp, char const *msg,
+			 size_t const msglen);
+static void reveal_msg(struct BMP_file * const bmp);
+static void reveal_msg_lsb(struct BMP_file * const bmp);
+static void hide_file(struct BMP_file * const bmp, char const *hfile);
+static void reveal_file(struct BMP_file * const bmp);
+
+/*
+ * This function is the public interface which invokes the appropriate
+ * function to perform steganographic hiding.
+ */
+void hide(struct BMP_file * const bmp, struct Args const * const args)
+{
+	/* Perform using LSB or simple method */
+	bool lsb = false;
+	if (args->mflag && strncmp(args->mmet, "lsb", 3) == 0)
+		lsb = true;
+
+	/* Perform on files or messages */
+	bool hidefile = false;
+	if (args->tflag && strncmp(args->ttyp, "file", 4) == 0)
+		hidefile = true;
+
+	if (hidefile) {
+		hide_file(bmp, args->eval);
+	} else {
+		if (lsb)
+			hide_msg_lsb(bmp, args->eval, args->evallen);
+		else
+			hide_msg(bmp, args->eval, args->evallen);
+	}
+
+	int const fd = create_file(bmp);
+	close(fd);
+}
+
+/*
+ * This function is the public interface which invokes the appropriate
+ * function for revealing steganographic data.
+ */
+void reveal(struct BMP_file * const bmp, struct Args const * const args)
+{
+	/* Perform using LSB or simple method */
+	bool lsb = false;
+	if (args->mflag && strncmp(args->mmet, "lsb", 3) == 0)
+		lsb = true;
+
+	/* Perform on files or messages */
+	bool hidefile = false;
+	if (args->tflag && strncmp(args->ttyp, "file", 4) == 0)
+		hidefile = true;
+
+	if (hidefile) {
+		reveal_file(bmp);
+	} else {
+		if (lsb)
+			reveal_msg_lsb(bmp);
+		else
+			reveal_msg(bmp);
+	}
+}
+
 /*
  * Hides |msg| in |data|.
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg(struct BMP_file * const bmp, char const *msg, size_t const msglen)
+static void hide_msg(struct BMP_file * const bmp, char const *msg,
+		     size_t const msglen)
 {
 	size_t maxlen = bmp->datalen / 3;
 
@@ -26,8 +91,8 @@ void hide_msg(struct BMP_file * const bmp, char const *msg, size_t const msglen)
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg_lsb(struct BMP_file * const bmp,
-		  char const *msg, size_t const msglen)
+static void hide_msg_lsb(struct BMP_file * const bmp,
+			 char const *msg, size_t const msglen)
 {
 	/*
 	 * The reason for the constant 48: with LSB method (using one least
@@ -84,7 +149,7 @@ void hide_msg_lsb(struct BMP_file * const bmp,
  * This function does the opposite of hide_msg(), but does not alter the
  * |data| values; just prints the message.
  */
-void reveal_msg(struct BMP_file * const bmp)
+static void reveal_msg(struct BMP_file * const bmp)
 {
 	/* Length of message is stored in the first blue byte */
 	size_t len = (size_t) bmp->data[0].b;
@@ -105,7 +170,7 @@ void reveal_msg(struct BMP_file * const bmp)
  * This function does the opposite of hide_msg(), but does not alter the
  * |data| values; just prints the message.
  */
-void reveal_msg_lsb(struct BMP_file * const bmp)
+static void reveal_msg_lsb(struct BMP_file * const bmp)
 {
 	/* Length of message is stored in the first 8 blue bytes */
 	size_t i;
@@ -155,7 +220,7 @@ void reveal_msg_lsb(struct BMP_file * const bmp)
  *
  * The file is hidden in the blue channel of the RGB pixel.
  */
-void hide_file(struct BMP_file * const bmp, char const *hfile)
+static void hide_file(struct BMP_file * const bmp, char const *hfile)
 {
 	/*
 	 * The maximum amount of bytes that could be written is the number of blue
@@ -211,7 +276,7 @@ void hide_file(struct BMP_file * const bmp, char const *hfile)
  * This function does the opposite of hide_file(), but does not alter the
  * |data| values; just creates the revealed file.
  */
-void reveal_file(struct BMP_file * const bmp)
+static void reveal_file(struct BMP_file * const bmp)
 {
 	/* Obtain the length of the hidden file by reading the first 4 bytes */
 	size_t hidelen = 0;

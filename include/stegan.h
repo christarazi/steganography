@@ -9,50 +9,20 @@
 
 #define SUPPORTED_MAX_MSG_LEN 255
 
-/*
- * Hides |msg| in |data|.
- *
- * The message is hidden in the blue channel of the RGB pixel.
- */
-void hide_msg(struct BMP_file * const bmp, char const *msg, size_t const msglen);
+/* Forward declarations */
+struct BMP_file;
+struct Args;
 
 /*
- * Hides |msg| in |data| using LSB method.
- *
- * The message is hidden in the blue channel of the RGB pixel.
+ * This function is the public interface which invokes the appropriate
+ * function to perform steganographic hiding.
  */
-void hide_msg_lsb(struct BMP_file * const bmp,
-		  char const *msg, size_t const msglen);
+void hide(struct BMP_file * const bmp, struct Args const * const args);
 
 /*
- * Reveals message hidden within image.
- *
- * This function does the opposite of hide_msg(), but does not alter the
- * |data| values; just prints the message.
+ * This function is the public interface which invokes the appropriate
+ * function for revealing steganographic data.
  */
-void reveal_msg(struct BMP_file * const bmp);
-
-/*
- * Reveals message hidden within image using LSB method.
- *
- * This function does the opposite of hide_msg(), but does not alter the
- * |data| values; just prints the message.
- */
-void reveal_msg_lsb(struct BMP_file * const bmp);
-
-/*
- * Hides a file by the name of |hfile| inside image.
- *
- * The file is hidden in the blue channel of the RGB pixel.
- */
-void hide_file(struct BMP_file * const bmp, char const *hfile);
-
-/*
- * Reveals file hidden within image.
- *
- * This function does the opposite of hide_file(), but does not alter the
- * |data| values; just creates the revealed file.
- */
-void reveal_file(struct BMP_file * const bmp);
+void reveal(struct BMP_file * const bmp, struct Args const * const args);
 
 #endif  /* _STEGAN_H_ */
