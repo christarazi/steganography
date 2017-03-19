@@ -5,21 +5,20 @@
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg(struct BMP_file * const bmpfile,
-	      char const *msg, size_t const msglen)
+void hide_msg(struct BMP_file * const bmp, char const *msg, size_t const msglen)
 {
-	size_t maxlen = bmpfile->datalen / 3;
+	size_t maxlen = bmp->datalen / 3;
 
 	/* Make sure not to overflow |data| */
 	if (msglen > maxlen) {
 		fprintf(stderr, "Error: message is too big for image\n");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
-	bmpfile->data[0].b = (unsigned char) msglen;
+	bmp->data[0].b = (unsigned char) msglen;
 
 	for (size_t i = 1; i < msglen; i++)
-		bmpfile->data[i].b = msg[i];
+		bmp->data[i].b = msg[i];
 }
 
 /*
@@ -27,7 +26,7 @@ void hide_msg(struct BMP_file * const bmpfile,
  *
  * The message is hidden in the blue channel of the RGB pixel.
  */
-void hide_msg_lsb(struct BMP_file * const bmpfile,
+void hide_msg_lsb(struct BMP_file * const bmp,
 		  char const *msg, size_t const msglen)
 {
 	/*
@@ -38,12 +37,12 @@ void hide_msg_lsb(struct BMP_file * const bmpfile,
 	 * Taking into account writing the length byte (also across 8 blue bytes),
 	 * that takes the total to 48 bytes.
 	 */
-	size_t maxlen = bmpfile->datalen / 48;
+	size_t maxlen = bmp->datalen / 48;
 
 	/* Make sure not to overflow |data| */
 	if (msglen > maxlen) {
 		fprintf(stderr, "Error: message is too big for image\n");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	unsigned char bit;
@@ -54,24 +53,24 @@ void hide_msg_lsb(struct BMP_file * const bmpfile,
 	/* Write length of message in the first 8 blue bytes */
 	for (unsigned char j = 0; j < 8; j++) {
 		bit = (msglen >> j) & 1;
-		data = bmpfile->data[d].b;
+		data = bmp->data[d].b;
 
 		/* Change 0th bit (LSB) to |bit| */
 		data = (data & ~(1 << 0)) | (bit << 0);
 
-		bmpfile->data[d].b = data;
+		bmp->data[d].b = data;
 		d++;
 	}
 
 	while (m < msglen && d < maxlen) {
 		for (unsigned char j = 0; j < 8; j++) {
 			bit = (msg[m] >> j) & 1;
-			data = bmpfile->data[d].b;
+			data = bmp->data[d].b;
 
 			/* Change 0th bit (LSB) to |bit| */
 			data = (data & ~(1 << 0)) | (bit << 0);
 
-			bmpfile->data[d].b = data;
+			bmp->data[d].b = data;
 			d++;
 		}
 
@@ -85,17 +84,17 @@ void hide_msg_lsb(struct BMP_file * const bmpfile,
  * This function does the opposite of hide_msg(), but does not alter the
  * |data| values; just prints the message.
  */
-void reveal_msg(struct BMP_file * const bmpfile)
+void reveal_msg(struct BMP_file * const bmp)
 {
 	/* Length of message is stored in the first blue byte */
-	size_t len = (size_t) bmpfile->data[0].b;
+	size_t len = (size_t) bmp->data[0].b;
 	len++;
 
 	/* printf("[DEBUG] printing %zu bytes\n", len); */
 	printf("Message:\n");
 	for (size_t i = 1; i < len; i++) {
-		if (isprint(bmpfile->data[i].b))
-			printf("%c", bmpfile->data[i].b);
+		if (isprint(bmp->data[i].b))
+			printf("%c", bmp->data[i].b);
 	}
 	printf("\nEnd of message\n");
 }
@@ -106,14 +105,14 @@ void reveal_msg(struct BMP_file * const bmpfile)
  * This function does the opposite of hide_msg(), but does not alter the
  * |data| values; just prints the message.
  */
-void reveal_msg_lsb(struct BMP_file * const bmpfile)
+void reveal_msg_lsb(struct BMP_file * const bmp)
 {
 	/* Length of message is stored in the first 8 blue bytes */
 	size_t i;
 	size_t len = 0;
 	unsigned char buf[8] = { 0 };
 	for (i = 0; i < 8; i++) {
-		buf[i] = (bmpfile->data[i].b >> 0) & 1;
+		buf[i] = (bmp->data[i].b >> 0) & 1;
 		len += (buf[i] << i);
 	}
 
@@ -124,13 +123,10 @@ void reveal_msg_lsb(struct BMP_file * const bmpfile)
 	 */
 	len++;
 	len *= 8;
-	/* TODO:
-	 * Handle this case; need to close the |fp| here
-	 */
-	if (len > (bmpfile->datalen / 3)) {
+	if (len > (bmp->datalen / 3)) {
 		fprintf(stderr,
 			"Error: length mismatch found; possibly corrupt\n");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	unsigned char data = 0;
@@ -138,7 +134,7 @@ void reveal_msg_lsb(struct BMP_file * const bmpfile)
 	/* printf("[DEBUG] printing %zu bytes\n", len); */
 	printf("Message:\n");
 	for (i = 8; i < len; i++) {
-		buf[i % 8] = (bmpfile->data[i].b >> 0) & 1;
+		buf[i % 8] = (bmp->data[i].b >> 0) & 1;
 		count++;
 
 		if (count == 8) {
@@ -159,51 +155,51 @@ void reveal_msg_lsb(struct BMP_file * const bmpfile)
  *
  * The file is hidden in the blue channel of the RGB pixel.
  */
-void hide_file(struct BMP_file * const bmpfile, char const *hfile)
+void hide_file(struct BMP_file * const bmp, char const *hfile)
 {
 	/*
 	 * The maximum amount of bytes that could be written is the number of blue
 	 * bytes (hence dividing by 3) and subtract by 4 to account for the length
 	 * bytes which represent the size of the file to hide.
 	 */
-	size_t maxlen = (bmpfile->datalen / 3) - 4;
+	size_t maxlen = (bmp->datalen / 3) - 4;
 
 	FILE *hfp = fopen(hfile, "rb");
 	if (!hfp) {
 		perror("fopen");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	size_t hidelen;
 	if (!get_file_size(hfp, &hidelen)) {
 		fprintf(stderr, "Error: could not obtain size of file\n");
 		fclose(hfp);
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	if (hidelen > maxlen) {
 		fprintf(stderr, "Error: file too large to hide inside image\n");
 		fclose(hfp);
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	unsigned char *hdata = read_file(hfp, hidelen);
 	if (!hdata) {
 		fprintf(stderr, "Error: could not read file\n");
 		fclose(hfp);
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	/* Write size of file (4 bytes) */
 	for (size_t i = 0; i < 4; i++)
-		bmpfile->data[i].b = ((unsigned char) (hidelen >> (8 * i)));
+		bmp->data[i].b = ((unsigned char) (hidelen >> (8 * i)));
 
 	/*
 	 * Replace bitmap file data with the file data to hide.
 	 * Start at offset of 4 because of the 4 length bytes.
 	 */
 	for (size_t i = 0; i < hidelen; i++)
-		bmpfile->data[i + 4].b = hdata[i];
+		bmp->data[i + 4].b = hdata[i];
 
 	free(hdata);
 	fclose(hfp);
@@ -215,29 +211,26 @@ void hide_file(struct BMP_file * const bmpfile, char const *hfile)
  * This function does the opposite of hide_file(), but does not alter the
  * |data| values; just creates the revealed file.
  */
-void reveal_file(struct BMP_file * const bmpfile)
+void reveal_file(struct BMP_file * const bmp)
 {
 	/* Obtain the length of the hidden file by reading the first 4 bytes */
 	size_t hidelen = 0;
 	for (size_t i = 0; i < 4; i++)
-		hidelen += ((unsigned int) (bmpfile->data[i].b << (8 * i)));
+		hidelen += ((unsigned int) (bmp->data[i].b << (8 * i)));
 
 	/* See comment in hide_file() for explanation of the below calculation */
-	size_t maxlen = (bmpfile->datalen / 3) - 4;
+	size_t maxlen = (bmp->datalen / 3) - 4;
 
-	/* TODO:
-	 * Handle this case; need to close the |fp| here
-	 */
 	if (hidelen > maxlen) {
 		fprintf(stderr,
 			"Error: length mismatch found; possibly corrupt\n");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	unsigned char *hdata = malloc(hidelen);
 	if (!hdata) {
 		perror("malloc");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	/*
@@ -245,19 +238,19 @@ void reveal_file(struct BMP_file * const bmpfile)
 	 * 4 length bytes at the beginning.
 	 */
 	for (size_t i = 0; i < hidelen; i++)
-		hdata[i] = bmpfile->data[i + 4].b;
+		hdata[i] = bmp->data[i + 4].b;
 
 	char outname[] = "outXXXXXX";
 	int outfd = mkstemp(outname);
 	if (outfd < 0) {
 		perror("mkstemp");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	if (write(outfd, hdata, hidelen) < 0) {
 		perror("write");
 		close(outfd);
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	printf("Decoded file: %s\n", outname);

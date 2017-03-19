@@ -2,23 +2,23 @@
 #include "../include/helper.h"
 
 /*
- * Initializes |bmpfile| struct with BMP information such as type of header,
+ * Initializes |bmp| struct with BMP information such as type of header,
  * header length, total file size, etc.
  *
  * This function will also validate that the input file is a valid BMP file.
  *
  * Returns: true if file is supported; false otherwise.
  */
-bool init_bmp(struct BMP_file * const bmpfile)
+bool init_bmp(struct BMP_file * const bmp)
 {
 	unsigned char const expect[] = SUPPORTED_FILE_TYPE;
 	unsigned char marker[2];
 	struct stat statbuf;
 
-	int fd = fileno(bmpfile->fp);
+	int fd = fileno(bmp->fp);
 	if (fd < 0) {
 		perror("fileno");
-		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
 	}
 
 	/* Get size of file */
@@ -41,13 +41,13 @@ bool init_bmp(struct BMP_file * const bmpfile)
 		return false;
 	}
 
-	bmpfile->tot_size = statbuf.st_size;
+	bmp->tot_size = statbuf.st_size;
 
 	/* Make sure to read from the beginning of the file */
-	rewind(bmpfile->fp);
-	if (fread(marker, 1, 2, bmpfile->fp) != 2 && !feof(bmpfile->fp)) {
+	rewind(bmp->fp);
+	if (fread(marker, 1, 2, bmp->fp) != 2 && !feof(bmp->fp)) {
 		perror("fread");
-		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
 	}
 
 	/* printf("[DEBUG] expect: %s\n", expect); */
@@ -58,32 +58,32 @@ bool init_bmp(struct BMP_file * const bmpfile)
 		return false;
 	}
 
-	bmpfile->diblen = find_dib_len(bmpfile->fp);
-	bmpfile->headerlen = BMPFILEHEADERLEN + bmpfile->diblen;
+	bmp->diblen = find_dib_len(bmp->fp);
+	bmp->headerlen = BMPFILEHEADERLEN + bmp->diblen;
 
-	switch (bmpfile->diblen) {
+	switch (bmp->diblen) {
 	case BITMAPCOREHEADERLEN:
-		bmpfile->type = BITMAPCOREHEADER;
+		bmp->type = BITMAPCOREHEADER;
 		break;
 	case OS22XBITMAPHEADERLEN:
-		bmpfile->type = OS22XBITMAPHEADER;
+		bmp->type = OS22XBITMAPHEADER;
 		break;
 	case BITMAPINFOHEADERLEN:
-		bmpfile->type = BITMAPINFOHEADER;
+		bmp->type = BITMAPINFOHEADER;
 		break;
 	case BITMAPV4HEADERLEN:
-		bmpfile->type = BITMAPV4HEADER;
+		bmp->type = BITMAPV4HEADER;
 		break;
 	case BITMAPV5HEADERLEN:
-		bmpfile->type = BITMAPV5HEADER;
+		bmp->type = BITMAPV5HEADER;
 		break;
 	default:
 		fprintf(stderr, "Error: unknown DIB header found\n");
 		return false;
 	}
 
-	bmpfile->data_off = find_data_offset(bmpfile->fp);
-	find_bpp(bmpfile);
+	bmp->data_off = find_data_offset(bmp->fp);
+	find_bpp(bmp);
 
 	return true;
 }
@@ -150,7 +150,7 @@ size_t find_dib_len(FILE * const fp)
  * Finds the bits per pixel used in BMP file. It is a 4 byte value
  * that is stored unsigned.
  */
-void find_bpp(struct BMP_file * const bmpfile)
+void find_bpp(struct BMP_file * const bmp)
 {
 	unsigned char buf[4];
 
@@ -159,16 +159,16 @@ void find_bpp(struct BMP_file * const bmpfile)
 	 * type of header. If the header type is BITMAPCOREHEADER then it's located
 	 * in the 24th byte, otherwise, it's the 28th byte.
 	 */
-	long check_byte = bmpfile->type == BITMAPCOREHEADER ? 24L : 28L;
+	long check_byte = bmp->type == BITMAPCOREHEADER ? 24L : 28L;
 
-	if (fseek(bmpfile->fp, check_byte, SEEK_SET) < 0) {
+	if (fseek(bmp->fp, check_byte, SEEK_SET) < 0) {
 		perror("fseek");
-		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
 	}
 
-	if (fread(buf, 1, 4, bmpfile->fp) != 4 && !feof(bmpfile->fp)) {
+	if (fread(buf, 1, 4, bmp->fp) != 4 && !feof(bmp->fp)) {
 		perror("fread");
-		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
 	}
 
 	unsigned int bpp = *((unsigned int *) buf);
@@ -176,53 +176,53 @@ void find_bpp(struct BMP_file * const bmpfile)
 		fprintf(stderr,
 			"Error: only %u bits per pixel supported, found %u\n",
 			SUPPORTED_BPP, bpp);
-		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
 	}
 
 	printf("Found bits per pixel: %u\n", bpp);
-	bmpfile->bpp = bpp;
+	bmp->bpp = bpp;
 }
 
 /*
- * Creates a steganographic BMP file out of |bmpfile->data|. The header for the
+ * Creates a steganographic BMP file out of |bmp->data|. The header for the
  * new BMP file is copied from the source file.
  *
  * Return: file descriptor of new file.
  */
-int create_file(struct BMP_file * const bmpfile)
+int create_file(struct BMP_file * const bmp)
 {
 	int tmpfd;
 	unsigned char *header;
-	size_t hlen = bmpfile->headerlen;
+	size_t hlen = bmp->headerlen;
 	char tmpfname[] = "fileXXXXXX";
 
 	if (!(header = malloc(hlen))) {
 		perror("malloc");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	printf("Full header (BMP header & DIB header) len: %zu\n",
-	       bmpfile->headerlen);
+	       bmp->headerlen);
 
 	if ((tmpfd = mkstemp(tmpfname)) < 0) {
 		perror("mkstemp");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
-	rewind(bmpfile->fp);
-	if (fread(header, 1, hlen, bmpfile->fp) != hlen && !feof(bmpfile->fp)) {
+	rewind(bmp->fp);
+	if (fread(header, 1, hlen, bmp->fp) != hlen && !feof(bmp->fp)) {
 		perror("fread");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	if (write(tmpfd, header, hlen) < 0) {
 		perror("write");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
-	if (write(tmpfd, bmpfile->data, bmpfile->datalen) < 0) {
+	if (write(tmpfd, bmp->data, bmp->datalen) < 0) {
 		perror("write");
-		clean_exit(bmpfile->fp, bmpfile->data, EXIT_FAILURE);
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	printf("Created temp file: %s\n", tmpfname);
@@ -233,48 +233,48 @@ int create_file(struct BMP_file * const bmpfile)
 
 /*
  * Read the RGB pixels (data) of the BMP file.
- * Populates the |bmpfile| struct with the RGB data and the length of the data.
+ * Populates the |bmp| struct with the RGB data and the length of the data.
  */
-void read_bmp(struct BMP_file * const bmpfile)
+void read_bmp(struct BMP_file * const bmp)
 {
 	struct RGB *data;
 	size_t rgblen;
 
 	/* Find length of data section */
-	if (fseek(bmpfile->fp, 0L, SEEK_END) < 0) {
+	if (fseek(bmp->fp, 0L, SEEK_END) < 0) {
 		perror("fseek");
-		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
 	}
 
-	/* printf("[DEBUG] total size: %zu\n", bmpfile->tot_size); */
-	/* printf("[DEBUG] data_off:   %zu\n", bmpfile->data_off); */
-	if (bmpfile->tot_size <= bmpfile->data_off) {
+	/* printf("[DEBUG] total size: %zu\n", bmp->tot_size); */
+	/* printf("[DEBUG] data_off:   %zu\n", bmp->data_off); */
+	if (bmp->tot_size <= bmp->data_off) {
 		fprintf(stderr,
 			"Error: file seems to be missing its data section; possibly "
 			"corrupt\n");
-		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
 	}
 
-	rgblen = bmpfile->tot_size - bmpfile->data_off;
+	rgblen = bmp->tot_size - bmp->data_off;
 
 	/* Seek back to beginning of data section */
-	if (fseek(bmpfile->fp, (long) bmpfile->data_off, SEEK_SET) < 0) {
+	if (fseek(bmp->fp, (long) bmp->data_off, SEEK_SET) < 0) {
 		perror("fseek");
-		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
 	}
 
 	/* printf("[DEBUG] rgblen: %zu\n", rgblen); */
 	if (!(data = malloc(rgblen))) {
 		perror("malloc");
-		clean_exit(bmpfile->fp, NULL, EXIT_FAILURE);
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
 	}
 
-	if ((fread(data, 1, rgblen, bmpfile->fp) != rgblen) && !feof(bmpfile->fp)) {
+	if ((fread(data, 1, rgblen, bmp->fp) != rgblen) && !feof(bmp->fp)) {
 		perror("fread");
-		clean_exit(bmpfile->fp, data, EXIT_FAILURE);
+		clean_exit(bmp->fp, data, EXIT_FAILURE);
 	}
 
-	bmpfile->datalen = rgblen;
-	bmpfile->data = data;
+	bmp->datalen = rgblen;
+	bmp->data = data;
 	printf("Read %zu RGB values\n", rgblen);
 }

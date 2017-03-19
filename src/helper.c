@@ -185,4 +185,3 @@ unsigned char *read_file(FILE * const hfp, size_t const len)
 
 	return hdata;
 }
-

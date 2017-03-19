@@ -18,12 +18,12 @@ int main(int argc, char **argv)
 		clean_exit(fp, NULL, EXIT_FAILURE);
 	}
 
-	struct BMP_file bmpfile;
-	bmpfile.fp = fp;
-	if (!init_bmp(&bmpfile))
-		clean_exit(bmpfile.fp, NULL, EXIT_FAILURE);
+	struct BMP_file bmp;
+	bmp.fp = fp;
+	if (!init_bmp(&bmp))
+		clean_exit(bmp.fp, NULL, EXIT_FAILURE);
 
-	read_bmp(&bmpfile);
+	read_bmp(&bmp);
 
 	bool lsb = false;
 	if (args.mflag && strncmp(args.mmet, "lsb", 3) == 0)
@@ -35,27 +35,27 @@ int main(int argc, char **argv)
 
 	if (args.eflag) {
 		if (filemode)
-			hide_file(&bmpfile, args.eval);
+			hide_file(&bmp, args.eval);
 		else {
 			if (lsb)
-				hide_msg_lsb(&bmpfile, args.eval, args.evallen);
+				hide_msg_lsb(&bmp, args.eval, args.evallen);
 			else
-				hide_msg(&bmpfile, args.eval, args.evallen);
+				hide_msg(&bmp, args.eval, args.evallen);
 		}
-		int const fd = create_file(&bmpfile);
+		int const fd = create_file(&bmp);
 		close(fd);
 	} else if (args.dflag) {
 		if (filemode)
-			reveal_file(&bmpfile);
+			reveal_file(&bmp);
 		else {
 			if (lsb)
-				reveal_msg_lsb(&bmpfile);
+				reveal_msg_lsb(&bmp);
 			else
-				reveal_msg(&bmpfile);
+				reveal_msg(&bmp);
 		}
 	}
 
-	free(bmpfile.data);
-	fclose(bmpfile.fp);
+	free(bmp.data);
+	fclose(bmp.fp);
 	return EXIT_SUCCESS;
 }
