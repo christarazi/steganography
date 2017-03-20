@@ -34,7 +34,7 @@ void hide(struct BMP_file * const bmp, struct Args const * const args)
 			hide_msg(bmp, args->eval, args->evallen);
 	}
 
-	int const fd = create_file(bmp);
+	int const fd = create_bmp(bmp);
 	close(fd);
 }
 

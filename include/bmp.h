@@ -87,7 +87,7 @@ void find_bpp(struct BMP_file * const bmp);
  *
  * Return: file descriptor of new file.
  */
-int create_file(struct BMP_file * const bmp);
+int create_bmp(struct BMP_file * const bmp);
 
 /*
  * Read the RGB pixels (data) of the BMP file.
