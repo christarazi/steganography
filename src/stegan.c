@@ -318,5 +318,6 @@ static void reveal_file(struct BMP_file * const bmp)
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
+	close(outfd);
 	printf("Decoded file: %s\n", outname);
 }
