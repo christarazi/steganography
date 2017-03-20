@@ -155,6 +155,12 @@ static void reveal_msg(struct BMP_file * const bmp)
 	size_t len = (size_t) bmp->data[0].b;
 	len++;
 
+	if (len > (bmp->datalen / 3)) {
+		fprintf(stderr,
+			"Error: length mismatch found; possibly corrupt\n");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
+
 	/* printf("[DEBUG] printing %zu bytes\n", len); */
 	printf("Message:\n");
 	for (size_t i = 1; i < len; i++) {
