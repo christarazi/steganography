@@ -145,7 +145,6 @@ bool get_file_size(FILE * const fp, size_t *sz)
 	int fd = fileno(fp);
 	if (fd < 0) {
 		perror("fileno");
-		fclose(fp);
 		return false;
 	}
 
@@ -154,7 +153,6 @@ bool get_file_size(FILE * const fp, size_t *sz)
 	if ((fstat(fd, &statbuf) != 0) || (!S_ISREG(statbuf.st_mode))) {
 		fprintf(stderr, "Error: could not determine file size, "
 			"ensure it is a regular file\n");
-		fclose(fp);
 		return false;
 	}
 
