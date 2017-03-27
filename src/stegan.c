@@ -28,11 +28,9 @@ void hide(struct BMP_file * const bmp, struct Args const * const args)
 		hidefile = true;
 
 	if (hidefile) {
-		hide_file(bmp, args->eval);
+		lsb ? hide_file_lsb(bmp, args->eval) : hide_file(bmp, args->eval);
 	} else {
-		if (lsb)
-			hide_msg_lsb(bmp, args->eval, args->evallen);
-		else
+		lsb ? hide_msg_lsb(bmp, args->eval, args->evallen) :
 			hide_msg(bmp, args->eval, args->evallen);
 	}
 
@@ -57,12 +55,9 @@ void reveal(struct BMP_file * const bmp, struct Args const * const args)
 		hidefile = true;
 
 	if (hidefile) {
-		reveal_file(bmp);
+		lsb ? reveal_file_lsb(bmp) : reveal_file(bmp);
 	} else {
-		if (lsb)
-			reveal_msg_lsb(bmp);
-		else
-			reveal_msg(bmp);
+		lsb ? reveal_msg_lsb(bmp) : reveal_msg(bmp);
 	}
 }
 
@@ -74,18 +69,18 @@ void reveal(struct BMP_file * const bmp, struct Args const * const args)
 static void hide_msg(struct BMP_file * const bmp, char const *msg,
 		     size_t const msglen)
 {
-	size_t maxlen = bmp->datalen / 3;
+	size_t maxlimit = (bmp->datalen / 3) - 1;
 
-	/* Make sure not to overflow |data| */
-	if (msglen > maxlen) {
+	/* Make sure not to overflow |bmp->data| */
+	if (msglen > maxlimit) {
 		fprintf(stderr, "Error: message is too big for image\n");
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	bmp->data[0].b = (unsigned char) msglen;
 
-	for (size_t i = 1; i < msglen; i++)
-		bmp->data[i].b = msg[i];
+	for (size_t i = 0; i < msglen; i++)
+		bmp->data[i + 1].b = msg[i];
 }
 
 /*
@@ -96,26 +91,19 @@ static void hide_msg(struct BMP_file * const bmp, char const *msg,
 static void hide_msg_lsb(struct BMP_file * const bmp,
 			 char const *msg, size_t const msglen)
 {
-	/*
-	 * The reason for the constant 48: with LSB method (using one least
-	 * significant bit), each byte from |msg| is spread across each 8 (blue)
-	 * bytes in the image. That means we have to seek through 24 bytes within
-	 * the image because we are skipping over the red and green bytes.
-	 * Taking into account writing the length byte (also across 8 blue bytes),
-	 * that takes the total to 48 bytes.
-	 */
-	size_t maxlen = bmp->datalen / 48;
+	/* The LSB method requires 24 bytes to store the length of the message */
+	size_t maxlimit = (bmp->datalen / 3) - 24;
 
 	/* Make sure not to overflow |data| */
-	if (msglen > maxlen) {
+	if (msglen > maxlimit) {
 		fprintf(stderr, "Error: message is too big for image\n");
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
 	unsigned char bit;
 	unsigned char data;
-	size_t m = 0;
-	size_t d = 0;
+	size_t m = 0;       /* Index of |msg| */
+	size_t d = 0;       /* Index of |bmp->data| */
 
 	/* Write length of message in the first 8 blue bytes */
 	for (unsigned char j = 0; j < 8; j++) {
@@ -129,7 +117,7 @@ static void hide_msg_lsb(struct BMP_file * const bmp,
 		d++;
 	}
 
-	while (m < msglen && d < maxlen) {
+	while (m < msglen && d < maxlimit) {
 		for (unsigned char j = 0; j < 8; j++) {
 			bit = (msg[m] >> j) & 1;
 			data = bmp->data[d].b;
@@ -154,10 +142,10 @@ static void hide_msg_lsb(struct BMP_file * const bmp,
 static void reveal_msg(struct BMP_file * const bmp)
 {
 	/* Length of message is stored in the first blue byte */
-	size_t len = (size_t) bmp->data[0].b;
-	len++;
+	size_t msglen = (size_t) bmp->data[0].b;
+	size_t maxlimit = (bmp->datalen / 3) - 1;
 
-	if (len > (bmp->datalen / 3)) {
+	if (msglen > maxlimit) {
 		fprintf(stderr,
 			"Error: length mismatch found; possibly corrupt\n");
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
@@ -165,6 +153,7 @@ static void reveal_msg(struct BMP_file * const bmp)
 
 	/* printf("[DEBUG] printing %zu bytes\n", len); */
 	printf("Message:\n");
+	size_t len = msglen + 1;  /* Add one accounting for length byte */
 	for (size_t i = 1; i < len; i++) {
 		if (isprint(bmp->data[i].b))
 			printf("%c", bmp->data[i].b);
@@ -181,39 +170,37 @@ static void reveal_msg(struct BMP_file * const bmp)
 static void reveal_msg_lsb(struct BMP_file * const bmp)
 {
 	/* Length of message is stored in the first 8 blue bytes */
-	size_t i;
 	size_t len = 0;
+	size_t maxlimit = (bmp->datalen / 3);
 	unsigned char buf[8] = { 0 };
-	for (i = 0; i < 8; i++) {
+	for (int8_t i = 0; i < 8; i++) {
 		buf[i] = (bmp->data[i].b >> 0) & 1;
 		len += (buf[i] << i);
 	}
 
 	/*
-	 * Don't forget to count the length byte.
-	 * Multiplying by 8 because that's the number of bytes the data is spread
-	 * across with the LSB method.
+	 * Count the length byte and multiply by 8 to get the get the total number
+	 * of bytes the data is spread across in the LSB method.
 	 */
-	len++;
-	len *= 8;
-	if (len > (bmp->datalen / 3)) {
+	len = (len + 1) * 8;
+	if (len > maxlimit) {
 		fprintf(stderr,
 			"Error: length mismatch found; possibly corrupt\n");
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
-	unsigned char data = 0;
-	unsigned char count = 0;
+	unsigned char data = 0;  /* Byte buffer for reading bits */
+	unsigned char count = 0; /* Counter for byte buffer */
 	/* printf("[DEBUG] printing %zu bytes\n", len); */
 	printf("Message:\n");
-	for (i = 8; i < len; i++) {
+	for (size_t i = 8; i < len; i++) {
 		buf[i % 8] = (bmp->data[i].b >> 0) & 1;
 		count++;
 
 		if (count == 8) {
 			count = 0;
 			data = 0;
-			for (short j = 7; j >= 0; j--)
+			for (int8_t j = 7; j >= 0; j--)
 				data += (buf[j] << j);
 
 			if (isprint(data))
@@ -235,7 +222,7 @@ static void hide_file(struct BMP_file * const bmp, char const *hfile)
 	 * bytes (hence dividing by 3) and subtract by 4 to account for the length
 	 * bytes which represent the size of the file to hide.
 	 */
-	size_t maxlen = (bmp->datalen / 3) - 4;
+	size_t maxlimit = (bmp->datalen / 3) - 4;
 
 	FILE *hfp = fopen(hfile, "rb");
 	if (!hfp) {
@@ -250,7 +237,7 @@ static void hide_file(struct BMP_file * const bmp, char const *hfile)
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
-	if (hidelen > maxlen) {
+	if (hidelen > maxlimit) {
 		fprintf(stderr, "Error: file too large to hide inside image\n");
 		fclose(hfp);
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
@@ -316,8 +303,8 @@ static void hide_file_lsb(struct BMP_file * const bmp, char const *hfile)
 
 	unsigned char bit;
 	unsigned char data;
-	size_t h = 0;
-	size_t d = 0;
+	size_t h = 0; /* Index for |hdata| */
+	size_t d = 0; /* Index for |bmp->data| */
 
 	/* Write size of file in the first 32 blue bytes */
 	for (int8_t j = 0; j < 32; j++) {
@@ -363,10 +350,9 @@ static void reveal_file(struct BMP_file * const bmp)
 	for (size_t i = 0; i < 4; i++)
 		hidelen += ((unsigned int) (bmp->data[i].b << (8 * i)));
 
-	/* See comment in hide_file() for explanation of the below calculation */
-	size_t maxlen = (bmp->datalen / 3) - 4;
-
-	if (hidelen > maxlen) {
+	/* Account for the 4 length bytes */
+	size_t maxlimit = (bmp->datalen / 3) - 4;
+	if (hidelen > maxlimit) {
 		fprintf(stderr,
 			"Error: length mismatch found; possibly corrupt\n");
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
@@ -412,7 +398,7 @@ static void reveal_file_lsb(struct BMP_file * const bmp)
 {
 	size_t hidelen = 0; /* Size of hidden file */
 
-	/* Size of file is stored in the first 32 blue bytes */
+	/* Obtain size of file is stored in the first 32 blue bytes */
 	unsigned char buf[32] = { 0 };
 	for (int8_t i = 0; i < 32; ++i) {
 		buf[i] = (bmp->data[i].b >> 0) & 1;
