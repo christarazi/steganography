@@ -84,7 +84,7 @@ Internet. The images in `samples/` are some examples of that.
 
  - ~~Add LSB (least significant bit) method instead of simply overwriting
  bytes~~
- - Add images within images
+ - ~~Add images within images~~
  - Add more support for different images
 
 ## Contribution
