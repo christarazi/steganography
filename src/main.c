@@ -1,3 +1,4 @@
+#include "../include/args.h"   /* struct Args, parse_args() */
 #include "../include/bmp.h"    /* For manipulating BMP images */
 #include "../include/helper.h" /* Helpers, clean_exit(), struct Args */
 #include "../include/stegan.h" /* hide(), reveal() */

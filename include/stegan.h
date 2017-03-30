@@ -4,14 +4,15 @@
 #include <ctype.h>
 #include <stdio.h>
 
+#include "../include/args.h"   /* For struct Args */
 #include "../include/bmp.h"    /* For struct BMP_file */
 #include "../include/helper.h" /* clean_exit(), read_file(), get_file_size() */
 
 #define SUPPORTED_MAX_MSG_LEN 255
 
 /* Forward declarations */
-struct BMP_file;
 struct Args;
+struct BMP_file;
 
 /*
  * This function is the public interface which invokes the appropriate
