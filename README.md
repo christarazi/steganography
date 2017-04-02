@@ -1,7 +1,8 @@
 # steganography
 A command-line C program that hides / reveals messages in Bitmap images (BMP)
-using steganography. This program supports the [LSB method]
-(https://en.wikipedia.org/wiki/Least_significant_bit) (least significant bit).
+using steganography. This program supports the
+[LSB method](https://en.wikipedia.org/wiki/Least_significant_bit) (least
+significant bit).
 This program will work on any Linux machine.
 
 **Disclaimer**: this was created for educational purposes. I do not take any
