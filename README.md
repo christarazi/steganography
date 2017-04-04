@@ -3,7 +3,9 @@ A command-line C program that hides / reveals messages in Bitmap images (BMP)
 using steganography. This program supports the
 [LSB method](https://en.wikipedia.org/wiki/Least_significant_bit) (least
 significant bit).
-This program will work on any Linux machine.
+
+This program conforms to the POSIX.1 standard so it will work on any POSIX.1
+compliant system.
 
 **Disclaimer**: this was created for educational purposes. I do not take any
 responsibility for any misuse of this program.
@@ -12,9 +14,9 @@ responsibility for any misuse of this program.
 
 ### Dependencies
 
-This program will compile on any Linux machine with:
+This program will compile on any POSIX.1 compliant system with the following:
 
- - gcc (gnu11 / c11 support)
+ - gcc (gnu11)
  - make
 
 ### Build / Installation
