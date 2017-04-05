@@ -53,6 +53,7 @@ unsigned char *read_file(FILE * const hfp, size_t const len)
 
 	if (fread(hdata, 1, len, hfp) != len&& !feof(hfp)) {
 		perror("fread");
+		free(hdata);
 		return NULL;
 	}
 
