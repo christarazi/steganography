@@ -35,17 +35,21 @@ To use `steg`:
 ```shell
 # Encode the message below into the provided sample BMP `tree.bpm`
 # This will output a file in the current directory like `fileXXXXXX`
-$ ./steg -m lsb -e "Hidden message" samples/tree.bmp
+$ ./steg -m lsb -t message -e "Hidden message" samples/tree.bmp
 
 # Decode the message from above
-$ ./steg -m lsb -c 20 -d `fileXXXXXX`
+$ ./steg -m lsb -t message -d `fileXXXXXX`
 
 # Encode message using 'simple' method
 # Check out the differences in output between 'lsb' and 'simple' with `hexdump`
-$ ./steg -m simple -e "Hidden message" samples/tree.bmp
+$ ./steg -m simple -t message -e "Hidden message" samples/tree.bmp
 
 # Decode the message from above
-$ ./steg -m simple -c 20 -d `fileXXXXXX`
+$ ./steg -m simple -d `fileXXXXXX`
+
+# Encode / decode files
+$ ./steg -m lsb -t file -e <SOMEFILE> samples/tree.bmp
+$ ./steg -m lsb -t file -d `fileXXXXXX`
 
 # See more usage help
 $ ./steg -h

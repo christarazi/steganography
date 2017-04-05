@@ -14,7 +14,7 @@ void print_usage(char const *n)
 		"                  <TYPE> can be 'message' or 'file'.\n"
 		"                  'message' is for hiding messages.\n"
 		"                  'file' is for hiding files (or images) within <BMP>.\n\n"
-		" -d               Decode and print message found in <BMP>.\n\n"
+		" -d               Decode [message | file] found in <BMP>.\n\n"
 		" -e <VAL>         <VAL> can be a message or a file name.\n"
 		"                  When <TYPE> is 'message', <VAL> is encoded in <BMP>.\n"
 		"                  When <TYPE> is 'file', <VAL> is the file to hide in <BMP>.\n"
