@@ -58,30 +58,6 @@ struct RGB {
 bool init_bmp(struct BMP_file * const bmp);
 
 /*
- * Finds offset at which the data of BMP file resides. This is where the RGB
- * pixel data is stored.
- * Source: https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
- *
- * Returns: byte offset where the data portion begins.
- */
-size_t find_data_offset(FILE * const fp);
-
-/*
- * Finds the length of DIB header.
- * Source:
- * https://en.wikipedia.org/wiki/BMP_file_format#DIB_header_.28bitmap_information_header.29
- *
- * Returns: length of DIB header.
- */
-size_t find_dib_len(FILE * const fp);
-
-/*
- * Finds the bits per pixel used in BMP file. It is a 4 byte value
- * that is stored unsigned.
- */
-void find_bpp(struct BMP_file * const bmp);
-
-/*
  * Creates a steganographic BMP file out of |bmp->data|. The header for the
  * new BMP file is copied from the source file.
  *

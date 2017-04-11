@@ -1,6 +1,10 @@
 #include "../include/bmp.h"
 #include "../include/helper.h"
 
+static size_t find_data_offset(FILE * const fp);
+static size_t find_dib_len(FILE * const fp);
+static void find_bpp(struct BMP_file * const bmp);
+
 /*
  * Initializes |bmp| struct with BMP information such as type of header,
  * header length, total file size, etc.
@@ -98,7 +102,7 @@ bool init_bmp(struct BMP_file * const bmp)
  *
  * Returns: byte offset where the data portion begins.
  */
-size_t find_data_offset(FILE * const fp)
+static size_t find_data_offset(FILE * const fp)
 {
 	unsigned char addr[4];
 
@@ -129,7 +133,7 @@ size_t find_data_offset(FILE * const fp)
  *
  * Returns: length of DIB header.
  */
-size_t find_dib_len(FILE * const fp)
+static size_t find_dib_len(FILE * const fp)
 {
 	unsigned char buf[4];
 
@@ -153,7 +157,7 @@ size_t find_dib_len(FILE * const fp)
  * Finds the bits per pixel used in BMP file. It is a 4 byte value
  * that is stored unsigned.
  */
-void find_bpp(struct BMP_file * const bmp)
+static void find_bpp(struct BMP_file * const bmp)
 {
 	unsigned char buf[4];
 
