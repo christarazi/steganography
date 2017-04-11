@@ -15,6 +15,8 @@ bool init_bmp(struct BMP_file * const bmp)
 	unsigned char marker[2];
 	struct stat statbuf;
 
+	printf("Validating BMP file...\n");
+
 	int fd = fileno(bmp->fp);
 	if (fd < 0) {
 		perror("fileno");
@@ -84,6 +86,7 @@ bool init_bmp(struct BMP_file * const bmp)
 
 	bmp->data_off = find_data_offset(bmp->fp);
 	find_bpp(bmp);
+	printf("Done validating BMP file.\n\n");
 
 	return true;
 }
@@ -201,9 +204,6 @@ int create_bmp(struct BMP_file * const bmp)
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
-	printf("Full header (BMP header & DIB header) len: %zu\n",
-	       bmp->headerlen);
-
 	if ((tmpfd = mkstemp(tmpfname)) < 0) {
 		perror("mkstemp");
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
@@ -225,7 +225,7 @@ int create_bmp(struct BMP_file * const bmp)
 		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
 	}
 
-	printf("Created temp file: %s\n", tmpfname);
+	printf("Created steganographic file: %s\n", tmpfname);
 	free(header);
 
 	return tmpfd;
@@ -276,5 +276,5 @@ void read_bmp(struct BMP_file * const bmp)
 
 	bmp->datalen = rgblen;
 	bmp->data = data;
-	printf("Read %zu RGB values\n", rgblen);
+	printf("Read %zu RGB values from input.\n", rgblen);
 }

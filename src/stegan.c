@@ -385,7 +385,7 @@ static void reveal_file(struct BMP_file * const bmp)
 	}
 
 	close(outfd);
-	printf("Decoded file: %s\n", outname);
+	printf("Successfully decoded file: %s\n", outname);
 }
 
 /*
@@ -456,5 +456,5 @@ static void reveal_file_lsb(struct BMP_file * const bmp)
 	}
 
 	close(outfd);
-	printf("Decoded file: %s\n", outname);
+	printf("Successfully decoded file: %s\n", outname);
 }
