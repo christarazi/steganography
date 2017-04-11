@@ -96,6 +96,99 @@ bool init_bmp(struct BMP_file * const bmp)
 }
 
 /*
+ * Read the RGB pixels (data) of the BMP file.
+ * Populates the |bmp| struct with the RGB data and the length of the data.
+ */
+void read_bmp(struct BMP_file * const bmp)
+{
+	struct RGB *data;
+	size_t rgblen;
+
+	/* Find length of data section */
+	if (fseek(bmp->fp, 0L, SEEK_END) < 0) {
+		perror("fseek");
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
+	}
+
+	/* printf("[DEBUG] total size: %zu\n", bmp->tot_size); */
+	/* printf("[DEBUG] data_off:   %zu\n", bmp->data_off); */
+	if (bmp->tot_size <= bmp->data_off) {
+		fprintf(stderr,
+			"Error: file seems to be missing its data section; possibly "
+			"corrupt\n");
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
+	}
+
+	rgblen = bmp->tot_size - bmp->data_off;
+
+	/* Seek back to beginning of data section */
+	if (fseek(bmp->fp, (long) bmp->data_off, SEEK_SET) < 0) {
+		perror("fseek");
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
+	}
+
+	/* printf("[DEBUG] rgblen: %zu\n", rgblen); */
+	if (!(data = malloc(rgblen))) {
+		perror("malloc");
+		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
+	}
+
+	if ((fread(data, 1, rgblen, bmp->fp) != rgblen) && !feof(bmp->fp)) {
+		perror("fread");
+		clean_exit(bmp->fp, data, EXIT_FAILURE);
+	}
+
+	bmp->datalen = rgblen;
+	bmp->data = data;
+	printf("Read %zu RGB values from input.\n", rgblen);
+}
+
+/*
+ * Creates a steganographic BMP file out of |bmp->data|. The header for the
+ * new BMP file is copied from the source file.
+ *
+ * Return: file descriptor of new file.
+ */
+int create_bmp(struct BMP_file * const bmp)
+{
+	int tmpfd;
+	unsigned char *header;
+	size_t hlen = bmp->headerlen;
+	char tmpfname[] = "fileXXXXXX";
+
+	if (!(header = malloc(hlen))) {
+		perror("malloc");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
+
+	if ((tmpfd = mkstemp(tmpfname)) < 0) {
+		perror("mkstemp");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
+
+	rewind(bmp->fp);
+	if (fread(header, 1, hlen, bmp->fp) != hlen && !feof(bmp->fp)) {
+		perror("fread");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
+
+	if (write(tmpfd, header, hlen) < 0) {
+		perror("write");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
+
+	if (write(tmpfd, bmp->data, bmp->datalen) < 0) {
+		perror("write");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
+
+	printf("Created steganographic file: %s\n", tmpfname);
+	free(header);
+
+	return tmpfd;
+}
+
+/*
  * Finds offset at which the data of BMP file resides. This is where the RGB
  * pixel data is stored.
  * Source: https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
@@ -188,97 +281,4 @@ static void find_bpp(struct BMP_file * const bmp)
 
 	printf("Found bits per pixel: %u\n", bpp);
 	bmp->bpp = bpp;
-}
-
-/*
- * Creates a steganographic BMP file out of |bmp->data|. The header for the
- * new BMP file is copied from the source file.
- *
- * Return: file descriptor of new file.
- */
-int create_bmp(struct BMP_file * const bmp)
-{
-	int tmpfd;
-	unsigned char *header;
-	size_t hlen = bmp->headerlen;
-	char tmpfname[] = "fileXXXXXX";
-
-	if (!(header = malloc(hlen))) {
-		perror("malloc");
-		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
-	}
-
-	if ((tmpfd = mkstemp(tmpfname)) < 0) {
-		perror("mkstemp");
-		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
-	}
-
-	rewind(bmp->fp);
-	if (fread(header, 1, hlen, bmp->fp) != hlen && !feof(bmp->fp)) {
-		perror("fread");
-		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
-	}
-
-	if (write(tmpfd, header, hlen) < 0) {
-		perror("write");
-		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
-	}
-
-	if (write(tmpfd, bmp->data, bmp->datalen) < 0) {
-		perror("write");
-		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
-	}
-
-	printf("Created steganographic file: %s\n", tmpfname);
-	free(header);
-
-	return tmpfd;
-}
-
-/*
- * Read the RGB pixels (data) of the BMP file.
- * Populates the |bmp| struct with the RGB data and the length of the data.
- */
-void read_bmp(struct BMP_file * const bmp)
-{
-	struct RGB *data;
-	size_t rgblen;
-
-	/* Find length of data section */
-	if (fseek(bmp->fp, 0L, SEEK_END) < 0) {
-		perror("fseek");
-		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
-	}
-
-	/* printf("[DEBUG] total size: %zu\n", bmp->tot_size); */
-	/* printf("[DEBUG] data_off:   %zu\n", bmp->data_off); */
-	if (bmp->tot_size <= bmp->data_off) {
-		fprintf(stderr,
-			"Error: file seems to be missing its data section; possibly "
-			"corrupt\n");
-		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
-	}
-
-	rgblen = bmp->tot_size - bmp->data_off;
-
-	/* Seek back to beginning of data section */
-	if (fseek(bmp->fp, (long) bmp->data_off, SEEK_SET) < 0) {
-		perror("fseek");
-		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
-	}
-
-	/* printf("[DEBUG] rgblen: %zu\n", rgblen); */
-	if (!(data = malloc(rgblen))) {
-		perror("malloc");
-		clean_exit(bmp->fp, NULL, EXIT_FAILURE);
-	}
-
-	if ((fread(data, 1, rgblen, bmp->fp) != rgblen) && !feof(bmp->fp)) {
-		perror("fread");
-		clean_exit(bmp->fp, data, EXIT_FAILURE);
-	}
-
-	bmp->datalen = rgblen;
-	bmp->data = data;
-	printf("Read %zu RGB values from input.\n", rgblen);
 }

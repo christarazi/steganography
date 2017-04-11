@@ -58,17 +58,17 @@ struct RGB {
 bool init_bmp(struct BMP_file * const bmp);
 
 /*
+ * Read the RGB pixels (data) of the BMP file.
+ * Populates the |bmp| struct with the RGB data and the length of the data.
+ */
+void read_bmp(struct BMP_file * const bmp);
+
+/*
  * Creates a steganographic BMP file out of |bmp->data|. The header for the
  * new BMP file is copied from the source file.
  *
  * Return: file descriptor of new file.
  */
 int create_bmp(struct BMP_file * const bmp);
-
-/*
- * Read the RGB pixels (data) of the BMP file.
- * Populates the |bmp| struct with the RGB data and the length of the data.
- */
-void read_bmp(struct BMP_file * const bmp);
 
 #endif  /* _BMP_H_ */
