@@ -21,7 +21,8 @@ void print_usage(char const *n)
 		, n);
 }
 
-void parse_args(int const argc, char * const *argv, struct Args * const args)
+// Returns true if arguments were parsed successfully, false otherwise.
+bool parse_args(int const argc, char * const *argv, struct Args * const args)
 {
 	char gtp;
 
@@ -29,7 +30,7 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 		switch (gtp) {
 		case 'h':
 			print_usage(argv[0]);
-			clean_exit(NULL, NULL, EXIT_SUCCESS);
+			return true;
 		case 'm':
 			args->mflag = true;
 			args->mmet = optarg;
@@ -38,7 +39,7 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 				fprintf(stderr,
 					"Option -%c only accepts '%s' or '%s'\n",
 					'm', "lsb", "simple");
-				clean_exit(NULL, NULL, EXIT_FAILURE);
+				return false;
 			}
 			break;
 		case 't':
@@ -49,7 +50,7 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 				fprintf(stderr,
 					"Option -%c only accepts '%s' or '%s'\n",
 					't', "message", "file");
-				clean_exit(NULL, NULL, EXIT_FAILURE);
+				return false;
 			}
 			break;
 		case 'd':
@@ -72,56 +73,56 @@ void parse_args(int const argc, char * const *argv, struct Args * const args)
 				fprintf(stderr,
 					"Unknown option character '\\x%x'\n",
 					optopt);
-			clean_exit(NULL, NULL, EXIT_FAILURE);
+			return false;
 		default:
 			print_usage(argv[0]);
-			clean_exit(NULL, NULL, EXIT_FAILURE);
+			return false;
 		}
 	}
 
 	if ((args->dflag && argc != 7) || (args->eflag && argc != 8)) {
 		print_usage(argv[0]);
-		clean_exit(NULL, NULL, EXIT_FAILURE);
+		return false;
 	}
 
 	/* |optind| holds the index of the first non-option argument in |argv| */
 	args->bmpfname = argv[optind];
-	/* printf("[DEBUG] optind: %d\n", optind); */
-	/* printf("[DEBUG] fname: %s\n", args->bmpfname); */
 
 	if (!(args->mflag)) {
 		fprintf(stderr, "Error: option -%c is required", 'm');
-		clean_exit(NULL, NULL, EXIT_FAILURE);
+		return false;
 	}
 
 	if (!(args->tflag)) {
 		fprintf(stderr, "Error: option -%c is required", 't');
-		clean_exit(NULL, NULL, EXIT_FAILURE);
+		return false;
 	}
 
 	if (!(args->dflag || args->eflag)) {
 		fprintf(stderr,
 			"Error: one of the two options (-%c, -%c) are "
 			"required \n", 'd', 'e');
-		clean_exit(NULL, NULL, EXIT_FAILURE);
+		return false;
 	}
 
 	if (args->dflag && args->eflag) {
 		fprintf(stderr,
 			"Error: only one of the two options (-%c, -%c) are "
 			"allowed at the same time\n", 'd', 'e');
-		clean_exit(NULL, NULL, EXIT_FAILURE);
+		return false;
 	}
 
 	if (args->eflag && args->evallen == 0) {
 		fprintf(stderr, "Error: value to option -%c is empty\n", 'e');
-		clean_exit(NULL, NULL, EXIT_FAILURE);
+		return false;
 	}
 
 	if (args->eflag && args->evallen > SUPPORTED_MAX_MSG_LEN) {
 		fprintf(stderr, "Error: max length for option -%c is %d\n",
 			'e', SUPPORTED_MAX_MSG_LEN);
-		clean_exit(NULL, NULL, EXIT_FAILURE);
+		return false;
 	}
+
+	return true;
 }
 

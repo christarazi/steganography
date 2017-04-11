@@ -24,6 +24,6 @@ struct Args {
 };
 
 void print_usage(char const *n);
-void parse_args(int const argc, char * const *argv, struct Args * const args);
+bool parse_args(int const argc, char * const *argv, struct Args * const args);
 
 #endif  /* _ARGS_H_ */

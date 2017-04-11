@@ -11,7 +11,9 @@ int main(int argc, char **argv)
 		.dflag = false,
 		.eflag = false
 	};
-	parse_args(argc, argv, &args);
+
+	if (!parse_args(argc, argv, &args))
+		clean_exit(NULL, NULL, EXIT_FAILURE);
 
 	FILE * const fp = fopen(args.bmpfname, "rb");
 	if (!fp) {
