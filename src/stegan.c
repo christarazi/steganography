@@ -18,14 +18,10 @@ static void reveal_file_lsb(struct BMP_file * const bmp);
 void hide(struct BMP_file * const bmp, struct Args const * const args)
 {
 	/* Perform using LSB or simple method */
-	bool lsb = false;
-	if (args->mflag && strncmp(args->mmet, "lsb", 3) == 0)
-		lsb = true;
+	bool lsb = (args->mflag && strncmp(args->mmet, "lsb", 3) == 0);
 
 	/* Perform on files or messages */
-	bool hidefile = false;
-	if (args->tflag && strncmp(args->ttyp, "file", 4) == 0)
-		hidefile = true;
+	bool hidefile = (args->tflag && strncmp(args->ttyp, "file", 4) == 0);
 
 	if (hidefile) {
 		lsb ? hide_file_lsb(bmp, args->eval) : hide_file(bmp, args->eval);
@@ -45,14 +41,10 @@ void hide(struct BMP_file * const bmp, struct Args const * const args)
 void reveal(struct BMP_file * const bmp, struct Args const * const args)
 {
 	/* Perform using LSB or simple method */
-	bool lsb = false;
-	if (args->mflag && strncmp(args->mmet, "lsb", 3) == 0)
-		lsb = true;
+	bool lsb = (args->mflag && strncmp(args->mmet, "lsb", 3) == 0);
 
 	/* Perform on files or messages */
-	bool hidefile = false;
-	if (args->tflag && strncmp(args->ttyp, "file", 4) == 0)
-		hidefile = true;
+	bool hidefile = (args->tflag && strncmp(args->ttyp, "file", 4) == 0);
 
 	if (hidefile) {
 		lsb ? reveal_file_lsb(bmp) : reveal_file(bmp);
