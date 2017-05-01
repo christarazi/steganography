@@ -37,4 +37,12 @@ bool get_file_size(FILE * const fp, size_t *sz);
  */
 unsigned char *read_file(FILE * const hfp, size_t const len);
 
+/*
+ * Helper function to perform safe subtraction on unsigned values. The result
+ * is stored inside of |r|.
+ *
+ * Returns: true if subtraction did not underflow, false otherwise.
+ */
+bool safe_subtract(size_t a, size_t b, size_t *r);
+
 #endif /* _HELPER_H_ */

@@ -27,7 +27,7 @@ void hide(struct BMP_file * const bmp, struct Args const * const args)
 		lsb ? hide_file_lsb(bmp, args->eval) : hide_file(bmp, args->eval);
 	} else {
 		lsb ? hide_msg_lsb(bmp, args->eval, args->evallen) :
-			hide_msg(bmp, args->eval, args->evallen);
+		    hide_msg(bmp, args->eval, args->evallen);
 	}
 
 	int const fd = create_bmp(bmp);
@@ -61,7 +61,13 @@ void reveal(struct BMP_file * const bmp, struct Args const * const args)
 static void hide_msg(struct BMP_file * const bmp, char const *msg,
 		     size_t const msglen)
 {
-	size_t maxlimit = (bmp->datalen / 3) - 1;
+	size_t maxlimit;
+	if (!safe_subtract((bmp->datalen / 3), 1, &maxlimit)) {
+		fprintf(stderr,
+			"Error: possible underflow detected, "
+			"image too small for message\n");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
 
 	/* Make sure not to overflow |bmp->data| */
 	if (msglen > maxlimit) {
@@ -84,7 +90,13 @@ static void hide_msg_lsb(struct BMP_file * const bmp,
 			 char const *msg, size_t const msglen)
 {
 	/* The LSB method requires 24 bytes to store the length of the message */
-	size_t maxlimit = (bmp->datalen / 3) - 24;
+	size_t maxlimit;
+	if (!safe_subtract((bmp->datalen / 3), 24, &maxlimit)) {
+		fprintf(stderr,
+			"Error: possible underflow detected, "
+			"image too small for message\n");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
 
 	/* Make sure not to overflow |data| */
 	if (msglen > maxlimit) {
@@ -133,9 +145,16 @@ static void hide_msg_lsb(struct BMP_file * const bmp,
  */
 static void reveal_msg(struct BMP_file * const bmp)
 {
+	size_t maxlimit;
+	if (!safe_subtract((bmp->datalen / 3), 1, &maxlimit)) {
+		fprintf(stderr,
+			"Error: possible underflow detected, "
+			"steganographic image may be corrupt\n");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
+
 	/* Length of message is stored in the first blue byte */
 	size_t msglen = (size_t) bmp->data[0].b;
-	size_t maxlimit = (bmp->datalen / 3) - 1;
 
 	if (msglen > maxlimit) {
 		fprintf(stderr,
@@ -214,7 +233,13 @@ static void hide_file(struct BMP_file * const bmp, char const *hfile)
 	 * bytes (hence dividing by 3) and subtract by 4 to account for the length
 	 * bytes which represent the size of the file to hide.
 	 */
-	size_t maxlimit = (bmp->datalen / 3) - 4;
+	size_t maxlimit;
+	if (!safe_subtract((bmp->datalen / 3), 4, &maxlimit)) {
+		fprintf(stderr,
+			"Error: possible underflow detected, "
+			"image too small for file\n");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
 
 	FILE *hfp = fopen(hfile, "rb");
 	if (!hfp) {
@@ -265,7 +290,13 @@ static void hide_file(struct BMP_file * const bmp, char const *hfile)
 static void hide_file_lsb(struct BMP_file * const bmp, char const *hfile)
 {
 	/* Number of blue bytes - 32 bytes to store size of file */
-	size_t maxlimit = (bmp->datalen / 3) - (8 * 4);
+	size_t maxlimit;
+	if (!safe_subtract((bmp->datalen / 3), (8 * 4), &maxlimit)) {
+		fprintf(stderr,
+			"Error: possible underflow detected, "
+			"image too small for file\n");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
 
 	FILE *hfp = fopen(hfile, "rb");
 	if (!hfp) {
@@ -343,7 +374,14 @@ static void reveal_file(struct BMP_file * const bmp)
 		hidelen += ((unsigned int) (bmp->data[i].b << (8 * i)));
 
 	/* Account for the 4 length bytes */
-	size_t maxlimit = (bmp->datalen / 3) - 4;
+	size_t maxlimit;
+	if (!safe_subtract((bmp->datalen / 3), 4, &maxlimit)) {
+		fprintf(stderr,
+			"Error: possible underflow detected, "
+			"steganographic image may be corrupt\n");
+		clean_exit(bmp->fp, bmp->data, EXIT_FAILURE);
+	}
+
 	if (hidelen > maxlimit) {
 		fprintf(stderr,
 			"Error: length mismatch found; possibly corrupt\n");
