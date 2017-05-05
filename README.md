@@ -97,3 +97,9 @@ Internet. The images in `samples/` are some examples of that.
 ## Contribution
 
 Please fork and submit a pull request. If you find a bug, submit an issue. I welcome feedback as well.
+
+## License
+
+This program is free software, distributed under the terms of the [GNU] General
+Public License as published by the Free Software Foundation, version 3 of the
+License (or any later version).  For more information, see the file LICENSE.
